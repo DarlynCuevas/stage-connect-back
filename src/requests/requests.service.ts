@@ -5,6 +5,7 @@ import { Request, RequestStatus } from './request.entity';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 import { User } from '../users/user.entity';
+import { RequestsGateway } from './requests.gateway';
 
 @Injectable()
 export class RequestsService {
@@ -13,13 +14,18 @@ export class RequestsService {
     private readonly requestsRepository: Repository<Request>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly requestsGateway: RequestsGateway,
   ) {}
 
   /**
    * Crear una nueva solicitud de booking
    */
-  async create(createRequestDto: CreateRequestDto): Promise<Request> {
-    const { artistId, requesterId, eventDate, eventLocation, eventType, offeredPrice, message } = createRequestDto;
+  async create(createRequestDto: CreateRequestDto, currentUserId: number): Promise<Request> {
+    const { artistId, eventDate, eventLocation, eventType, offeredPrice, message } = createRequestDto;
+
+    if (!currentUserId) {
+      throw new ForbiddenException('Usuario no autenticado.');
+    }
 
     // Validar que el artista existe
     const artist = await this.usersRepository.findOne({
@@ -31,17 +37,22 @@ export class RequestsService {
 
     // Validar que el solicitante existe
     const requester = await this.usersRepository.findOne({
-      where: { user_id: requesterId },
+      where: { user_id: currentUserId },
     });
     if (!requester) {
       throw new NotFoundException('El solicitante no existe.');
+    }
+
+    const parsedEventDate = new Date(eventDate);
+    if (isNaN(parsedEventDate.getTime())) {
+      throw new BadRequestException('Fecha de evento inválida.');
     }
 
     // Crear y guardar la solicitud
     const request = this.requestsRepository.create({
       artist,
       requester,
-      eventDate,
+      eventDate: parsedEventDate,
       eventLocation,
       eventType,
       offeredPrice,
@@ -49,7 +60,23 @@ export class RequestsService {
       status: RequestStatus.PENDIENTE,
     });
 
-    return this.requestsRepository.save(request);
+    const saved = await this.requestsRepository.save(request);
+
+    // Emitir evento en tiempo real al artista
+    this.requestsGateway.emitRequestCreated({
+      id: saved.id,
+      artistId: artist.user_id,
+      requesterId: requester.user_id,
+      eventDate: saved.eventDate?.toString?.() || String(saved.eventDate),
+      eventLocation: saved.eventLocation,
+      eventType: saved.eventType,
+      offeredPrice: Number(saved.offeredPrice),
+      message: saved.message,
+      status: saved.status,
+      createdAt: saved.createdAt?.toISOString?.(),
+    });
+
+    return saved;
   }
 
   /**

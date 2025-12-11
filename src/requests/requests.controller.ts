@@ -17,8 +17,9 @@ export class RequestsController {
    */
   @Post()
   @Roles('Local', 'Promotor')
-  async create(@Body() createRequestDto: CreateRequestDto) {
-    return this.requestsService.create(createRequestDto);
+  async create(@Body() createRequestDto: CreateRequestDto, @Request() req) {
+    const currentUserId = req.user?.user_id;
+    return this.requestsService.create(createRequestDto, currentUserId);
   }
 
   /**

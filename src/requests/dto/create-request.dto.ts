@@ -1,19 +1,17 @@
-import { IsNotEmpty, IsString, IsNumber, IsDate, IsOptional } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsNotEmpty, IsString, IsNumber, IsDateString, IsOptional } from 'class-validator';
 
 export class CreateRequestDto {
   @IsNotEmpty({ message: 'El ID del artista es requerido' })
   @IsNumber()
   artistId: number;
 
-  @IsNotEmpty({ message: 'El ID del solicitante es requerido' })
+  @IsOptional()
   @IsNumber()
-  requesterId: number;
+  requesterId?: number;
 
   @IsNotEmpty({ message: 'La fecha del evento es requerida' })
-  @Type(() => Date)
-  @IsDate()
-  eventDate: Date;
+  @IsDateString()
+  eventDate: string;
 
   @IsNotEmpty({ message: 'La ubicación del evento es requerida' })
   @IsString()

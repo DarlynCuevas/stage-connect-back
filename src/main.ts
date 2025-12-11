@@ -9,7 +9,7 @@ async function bootstrap() {
 
   // 1. Configurar CORS (para que el Frontend pueda conectarse)
   app.enableCors({
-    origin: 'http://localhost:8080', // <--- ¡CAMBIA ESTE PUERTO SI TU FRONTEND NO USA EL 3000!
+    origin: ['http://localhost:8080', 'http://localhost:5173'], // permitir front en vite o nginx
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
