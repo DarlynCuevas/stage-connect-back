@@ -1,0 +1,47 @@
+// Archivo: src/app.module.ts
+
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config'; // Módulo para leer el .env
+import { TypeOrmModule } from '@nestjs/typeorm'; // Módulo para la BBDD (PostgreSQL)
+import { env } from 'process';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { JwtModule } from './jwt/jwt.module';
+import { RequestsModule } from './requests/requests.module';
+
+@Module({
+  imports: [
+    // 1. Configura para cargar el archivo .env
+    ConfigModule.forRoot({ isGlobal: true }), 
+    
+    // 2. Usar TypeOrmModule.forRootAsync
+    TypeOrmModule.forRootAsync({
+      // 3. ¡CRÍTICO! Definir qué servicio se inyecta
+      imports: [ConfigModule],
+      inject: [ConfigService], 
+      
+      // 4. Usar useFactory, donde 'configService' es el argumento que se inyectó
+      useFactory: async (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_DATABASE'),
+        
+        // ... otras opciones (entities, synchronize)
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize: true, 
+      }),
+    }),
+    
+    UsersModule,
+    
+    AuthModule,
+    RequestsModule,
+    JwtModule,
+  ],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {}
