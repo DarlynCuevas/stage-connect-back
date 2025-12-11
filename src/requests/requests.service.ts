@@ -226,12 +226,20 @@ export class RequestsService {
     eventsThisMonth: number;
     totalRevenue: number;
   }> {
-    // Obtener artistas del manager
-    const artists = await this.usersRepository.find({
-      where: { managerId: managerId },
-    });
+    console.log('🔍 [getManagerStats] Manager ID:', managerId, 'Type:', typeof managerId);
+    
+    // Obtener artistas del manager usando query builder para mayor control
+    const artists = await this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.managerId = :managerId', { managerId: Number(managerId) })
+      .andWhere('user.role = :role', { role: 'Artista' })
+      .getMany();
+
+    console.log('🎨 [getManagerStats] Artists found:', artists.length);
+    console.log('🎨 [getManagerStats] Artists:', artists.map(a => ({ id: a.user_id, name: a.name, managerId: a.managerId })));
 
     if (artists.length === 0) {
+      console.log('⚠️ [getManagerStats] No artists found for manager');
       return {
         pendingRequests: 0,
         eventsThisMonth: 0,
@@ -240,14 +248,24 @@ export class RequestsService {
     }
 
     const artistIds = artists.map(a => a.user_id);
+    console.log('🎯 [getManagerStats] Artist IDs:', artistIds);
 
-    // Solicitudes pendientes
-    const pendingRequests = await this.requestsRepository.count({
-      where: {
-        artist: { user_id: In(artistIds) },
-        status: RequestStatus.PENDIENTE,
-      },
-    });
+    // Solicitudes pendientes - usar query builder para mayor visibilidad
+    const pendingRequestsQuery = await this.requestsRepository
+      .createQueryBuilder('request')
+      .leftJoin('request.artist', 'artist')
+      .where('artist.user_id IN (:...artistIds)', { artistIds })
+      .andWhere('request.status = :status', { status: RequestStatus.PENDIENTE })
+      .getMany();
+    
+    const pendingRequests = pendingRequestsQuery.length;
+    console.log('📊 [getManagerStats] Pending requests count:', pendingRequests);
+    console.log('📊 [getManagerStats] Pending requests details:', pendingRequestsQuery.map(r => ({ 
+      id: r.id, 
+      artistId: r.artist?.user_id, 
+      status: r.status,
+      eventType: r.eventType 
+    })));
 
     // Eventos este mes (aceptados)
     const now = new Date();
@@ -265,12 +283,15 @@ export class RequestsService {
     // Ingresos generados (suma de offeredPrice de eventos aceptados)
     const revenueResult = await this.requestsRepository
       .createQueryBuilder('request')
+      .innerJoin('request.artist', 'artist')
       .select('SUM(request.offeredPrice)', 'total')
-      .where('request.artistId IN (:...artistIds)', { artistIds })
+      .where('artist.user_id IN (:...artistIds)', { artistIds })
       .andWhere('request.status = :status', { status: RequestStatus.ACEPTADA })
       .getRawOne();
 
     const totalRevenue = parseFloat(revenueResult?.total || '0');
+
+    console.log('💰 [getManagerStats] Total revenue:', totalRevenue);
 
     return {
       pendingRequests,
