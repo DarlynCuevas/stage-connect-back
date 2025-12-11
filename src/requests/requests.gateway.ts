@@ -1,7 +1,8 @@
-import { UseGuards } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayConnection } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 type RequestCreatedPayload = {
   id: number;
@@ -19,7 +20,7 @@ type RequestCreatedPayload = {
 /**
  * Gateway for realtime booking request events.
  */
-@UseGuards(WsJwtGuard)
+@Injectable()
 @WebSocketGateway({
   namespace: '/',
   cors: {
@@ -31,13 +32,46 @@ export class RequestsGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
+  constructor(private jwtService: JwtService, private configService: ConfigService) {}
+
   /**
-   * Add each connected user to a personal room so we can target events by user_id.
+   * Validate JWT and add each connected user to a personal room so we can target events by user_id.
    */
   handleConnection(client: any) {
-    const userId = client?.data?.user?.user_id;
-    if (userId) {
-      client.join(this.getUserRoom(userId));
+    const authHeader: string | undefined = client.handshake?.headers?.authorization;
+    const tokenFromAuth = client.handshake?.auth?.token;
+    const tokenFromQuery = client.handshake?.query?.token;
+
+    const token = tokenFromAuth || tokenFromQuery || (authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined);
+
+    if (!token) {
+      client.disconnect();
+      return;
+    }
+
+    try {
+      const payload = this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+
+      const userId = payload.user_id;
+      if (!userId) {
+        client.disconnect();
+        return;
+      }
+
+      // Attach user to client data
+      client.data.user = {
+        user_id: userId,
+        email: payload.email,
+        role: payload.role,
+      };
+
+      // Join the user to their personal room
+      const room = this.getUserRoom(userId);
+      client.join(room);
+    } catch (err) {
+      client.disconnect();
     }
   }
 
@@ -48,7 +82,8 @@ export class RequestsGateway implements OnGatewayConnection {
 
   /** Notify a specific artist that a new request was created. */
   emitRequestCreated(payload: RequestCreatedPayload) {
-    this.server?.to(this.getUserRoom(payload.artistId)).emit('request.created', payload);
+    const room = this.getUserRoom(payload.artistId);
+    this.server?.to(room).emit('request.created', payload);
   }
 
   private getUserRoom(userId: number): string {

@@ -20,6 +20,11 @@ export class WsJwtGuard implements CanActivate {
 
     const token: string | undefined = client.handshake?.auth?.token || tokenFromHeader || client.handshake?.query?.token;
 
+    console.log(`[WsJwtGuard] Auth header:`, authHeader ? '***' : 'none');
+    console.log(`[WsJwtGuard] Token from auth.token:`, client.handshake?.auth?.token ? '***' : 'none');
+    console.log(`[WsJwtGuard] Token from header:`, tokenFromHeader ? '***' : 'none');
+    console.log(`[WsJwtGuard] Final token:`, token ? '***' : 'MISSING');
+
     if (!token) {
       throw new WsException('Unauthorized: token missing');
     }
@@ -29,6 +34,8 @@ export class WsJwtGuard implements CanActivate {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
 
+      console.log(`[WsJwtGuard] Payload decoded:`, payload);
+
       // Attach user payload to the socket for later use
       client.data.user = {
         user_id: payload.user_id,
@@ -36,8 +43,11 @@ export class WsJwtGuard implements CanActivate {
         role: payload.role,
       };
 
+      console.log(`[WsJwtGuard] User attached to client:`, client.data.user);
+
       return true;
     } catch (err) {
+      console.error(`[WsJwtGuard] Token verification failed:`, err);
       throw new WsException('Unauthorized: invalid token');
     }
   }
