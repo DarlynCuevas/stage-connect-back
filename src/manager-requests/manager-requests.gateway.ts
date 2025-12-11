@@ -4,31 +4,38 @@ import { Server } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
-type RequestCreatedPayload = {
+interface ManagerRequestCreatedPayload {
   id: number;
-  artistId: number;
-  managerId?: number;
-  requesterId: number;
-  eventDate: string;
-  eventLocation: string;
-  eventType: string;
-  offeredPrice: number;
+  senderId: number;
+  senderName?: string;
+  senderRole?: string;
+  receiverId: number;
+  receiverRole?: string;
   message?: string;
   status: string;
   createdAt?: string;
-};
+}
 
-type RequestUpdatedPayload = {
+interface ManagerRequestUpdatedPayload {
   id: number;
-  artistId: number;
-  managerId?: number;
+  senderId: number;
+  receiverId: number;
   status: string;
   updatedAt?: string;
-};
+}
 
-/**
- * Gateway for realtime booking request events.
- */
+interface ManagerRelationRemovedPayload {
+  artistId: number;
+  managerId: number;
+  performedBy: number;
+}
+
+interface ManagerRequestDeletedPayload {
+  id: number;
+  senderId: number;
+  receiverId: number;
+}
+
 @Injectable()
 @WebSocketGateway({
   namespace: '/',
@@ -37,15 +44,12 @@ type RequestUpdatedPayload = {
     credentials: true,
   },
 })
-export class RequestsGateway implements OnGatewayConnection {
+export class ManagerRequestsGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
   constructor(private jwtService: JwtService, private configService: ConfigService) {}
 
-  /**
-   * Validate JWT and add each connected user to a personal room so we can target events by user_id.
-   */
   handleConnection(client: any) {
     const authHeader: string | undefined = client.handshake?.headers?.authorization;
     const tokenFromAuth = client.handshake?.auth?.token;
@@ -69,14 +73,12 @@ export class RequestsGateway implements OnGatewayConnection {
         return;
       }
 
-      // Attach user to client data
       client.data.user = {
         user_id: userId,
         email: payload.email,
         role: payload.role,
       };
 
-      // Join the user to their personal room
       const room = this.getUserRoom(userId);
       client.join(room);
     } catch (err) {
@@ -89,26 +91,30 @@ export class RequestsGateway implements OnGatewayConnection {
     return 'pong';
   }
 
-  /** Notify a specific artist that a new request was created. */
-  emitRequestCreated(payload: RequestCreatedPayload) {
-    const artistRoom = this.getUserRoom(payload.artistId);
-    this.server?.to(artistRoom).emit('request.created', payload);
-
-    if (payload.managerId) {
-      const managerRoom = this.getUserRoom(payload.managerId);
-      this.server?.to(managerRoom).emit('request.created', payload);
-    }
+  emitManagerRequestCreated(payload: ManagerRequestCreatedPayload) {
+    const room = this.getUserRoom(payload.receiverId);
+    this.server?.to(room).emit('manager-request.created', payload);
   }
 
-  /** Notify artist and manager when a booking request status changes. */
-  emitRequestUpdated(payload: RequestUpdatedPayload) {
-    const artistRoom = this.getUserRoom(payload.artistId);
-    this.server?.to(artistRoom).emit('request.updated', payload);
+  emitManagerRequestUpdated(payload: ManagerRequestUpdatedPayload) {
+    const senderRoom = this.getUserRoom(payload.senderId);
+    const receiverRoom = this.getUserRoom(payload.receiverId);
+    this.server?.to(senderRoom).emit('manager-request.updated', payload);
+    this.server?.to(receiverRoom).emit('manager-request.updated', payload);
+  }
 
-    if (payload.managerId) {
-      const managerRoom = this.getUserRoom(payload.managerId);
-      this.server?.to(managerRoom).emit('request.updated', payload);
-    }
+  emitManagerRequestDeleted(payload: ManagerRequestDeletedPayload) {
+    const senderRoom = this.getUserRoom(payload.senderId);
+    const receiverRoom = this.getUserRoom(payload.receiverId);
+    this.server?.to(senderRoom).emit('manager-request.deleted', payload);
+    this.server?.to(receiverRoom).emit('manager-request.deleted', payload);
+  }
+
+  emitRelationRemoved(payload: ManagerRelationRemovedPayload) {
+    const artistRoom = this.getUserRoom(payload.artistId);
+    const managerRoom = this.getUserRoom(payload.managerId);
+    this.server?.to(artistRoom).emit('manager-relation.removed', payload);
+    this.server?.to(managerRoom).emit('manager-relation.removed', payload);
   }
 
   private getUserRoom(userId: number): string {

@@ -8,6 +8,8 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtModule } from './jwt/jwt.module';
 import { RequestsModule } from './requests/requests.module';
+import { BlockedDaysModule } from './blocked-days/blocked-days.module';
+import { ManagerRequestsModule } from './manager-requests/manager-requests.module';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { RequestsModule } from './requests/requests.module';
     
     AuthModule,
     RequestsModule,
+    BlockedDaysModule,
+    ManagerRequestsModule,
     JwtModule,
   ],
   controllers: [],

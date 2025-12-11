@@ -5,6 +5,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './user.entity';
 import { CreateUserInterface } from './dto/create-user.interface';
+import { Request } from '../requests/request.entity';
+import { BlockedDay } from '../blocked-days/blocked-day.entity';
 
 @Injectable()
 export class UsersService {
@@ -12,6 +14,10 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Request)
+    private requestsRepository: Repository<Request>,
+    @InjectRepository(BlockedDay)
+    private blockedDaysRepository: Repository<BlockedDay>,
   ) {}
 
   // Método usado por AuthService para verificar si el email ya existe
@@ -32,9 +38,35 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { user_id: id } });
   }
 
+  // Actualizar perfil de usuario
+  async updateProfile(userId: number, updateData: Partial<User>): Promise<User> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+    
+    // Merge update data
+    Object.assign(user, updateData);
+    
+    return this.usersRepository.save(user);
+  }
+
+  // Eliminar usuario por id (propio)
+  async deleteUser(userId: number): Promise<void> {
+    // Remove related requests where user is artist or requester
+    await this.requestsRepository.delete({ artist: { user_id: userId } as any });
+    await this.requestsRepository.delete({ requester: { user_id: userId } as any });
+
+    // Remove blocked days by this artist
+    await this.blockedDaysRepository.delete({ artist: { user_id: userId } as any });
+
+    // Finally remove user
+    await this.usersRepository.delete({ user_id: userId });
+  }
+
   // Buscar usuarios por rol (ej. 'Artista', 'Local', 'Promotor')
   async findByRole(role: string): Promise<User[]> {
-    return this.usersRepository.find({ where: { role } });
+    return this.usersRepository.find({ where: { role: role as UserRole } });
   }
 
   // Buscar usuarios por rol con filtros (búsqueda server-side)
@@ -42,7 +74,7 @@ export class UsersService {
     role: string,
     filters: {
       query?: string;
-      genre?: string;
+      genre?: string[];
       country?: string;
       city?: string;
       priceMin?: number;
@@ -74,16 +106,23 @@ export class UsersService {
     }
 
     if (filters.priceMin !== undefined) {
-      qb.andWhere('user.basePrice >= :priceMin', { priceMin: filters.priceMin });
+      // Use COALESCE to treat null basePrice as 0 for comparison
+      qb.andWhere('COALESCE(user.basePrice, 0) >= :priceMin', { priceMin: filters.priceMin });
     }
 
     if (filters.priceMax !== undefined) {
-      qb.andWhere('user.basePrice <= :priceMax', { priceMax: filters.priceMax });
+      qb.andWhere('COALESCE(user.basePrice, 0) <= :priceMax', { priceMax: filters.priceMax });
     }
 
     // Nota: para 'genre' sería ideal tener una relación/norma; si hay columna 'genre' string
-    if (filters.genre) {
-      qb.andWhere('user.genre ILIKE :genre', { genre: `%${filters.genre}%` });
+    if (filters.genre && filters.genre.length > 0) {
+      // Search for users that have ANY of the selected genres
+      const genreConditions = filters.genre.map((g, i) => `user.genre ILIKE :genre${i}`);
+      const genreParams = filters.genre.reduce((acc, g, i) => {
+        acc[`genre${i}`] = `%${g}%`;
+        return acc;
+      }, {} as any);
+      qb.andWhere(`(${genreConditions.join(' OR ')})`, genreParams);
     }
 
     qb.orderBy('user.created_at', 'DESC');
