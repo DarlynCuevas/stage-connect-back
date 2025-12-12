@@ -39,7 +39,11 @@ import { PublicController } from './public.controller';
         
         // ... otras opciones (entities, synchronize)
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, 
+        synchronize: true,
+        logging:
+          configService.get<string>('NODE_ENV') === 'production'
+            ? ['error', 'warn', 'schema']
+            : ['query', 'error', 'warn'],
       }),
     }),
     
