@@ -10,6 +10,7 @@ import { JwtModule } from './jwt/jwt.module';
 import { RequestsModule } from './requests/requests.module';
 import { BlockedDaysModule } from './blocked-days/blocked-days.module';
 import { ManagerRequestsModule } from './manager-requests/manager-requests.module';
+import { PublicController } from './public.controller';
 
 @Module({
   imports: [
@@ -30,6 +31,11 @@ import { ManagerRequestsModule } from './manager-requests/manager-requests.modul
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
+        ssl: configService.get<string>('NODE_ENV') === 'production' ? true : false,
+        extra:
+          configService.get<string>('NODE_ENV') === 'production'
+            ? { ssl: { rejectUnauthorized: false } }
+            : undefined,
         
         // ... otras opciones (entities, synchronize)
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
@@ -45,7 +51,7 @@ import { ManagerRequestsModule } from './manager-requests/manager-requests.modul
     ManagerRequestsModule,
     JwtModule,
   ],
-  controllers: [],
+  controllers: [PublicController],
   providers: [],
 })
 export class AppModule {}
