@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsEmail, IsString, MinLength, IsIn, isString } from 'class-validator';
+import { IsNotEmpty, IsEmail, IsString, MinLength, IsIn } from 'class-validator';
+import { Transform } from 'class-transformer';
 import type { UserRole } from '../../users/user.entity';
 
 export class RegisterDto {
@@ -19,5 +20,16 @@ export class RegisterDto {
   @IsString()
   // Asumo que UserRole incluye los 4 roles (Artista, Local, Manager, Promotor)
   @IsIn(['Artista', 'Local', 'Manager', 'Promotor'])
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim().toLowerCase();
+    const map: Record<string, UserRole> = {
+      artista: 'Artista',
+      local: 'Local',
+      manager: 'Manager',
+      promotor: 'Promotor',
+    };
+    return map[normalized] ?? value;
+  })
   role: UserRole;
 }
