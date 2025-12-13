@@ -5,11 +5,12 @@ import { ManagerRequestsService } from './manager-requests.service';
 import { ManagerRequestsController } from './manager-requests.controller';
 import { ManagerRequestsGateway } from './manager-requests.gateway';
 import { User } from '../users/user.entity';
+import { ArtistProfile } from '../users/artist-profile.entity';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ManagerRequest, User]),
+    TypeOrmModule.forFeature([ManagerRequest, User, ArtistProfile]),
     AuthModule,
   ],
   providers: [ManagerRequestsService, ManagerRequestsGateway],

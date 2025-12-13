@@ -1,3 +1,4 @@
+// ...existing code...
 // Archivo: src/users/users.controller.ts
 
 import { Controller, Get, Patch, Body, UseGuards, Request, Delete, Param, ForbiddenException } from '@nestjs/common';
@@ -11,6 +12,19 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 // Se aplican los guards: 1. Autenticación (JWT), 2. Autorización (Roles)
 @UseGuards(AuthGuard('jwt'), RolesGuard) 
 export class UsersController {
+    // Marcar/desmarcar favorito un local (PATCH /api/users/favorite/:venueId)
+    @Patch('favorite/:venueId')
+    async toggleFavorite(@Request() req, @Param('venueId') venueId: string, @Body() body: { favorite: boolean }) {
+      const userId = req.user.user_id;
+      // Solo el propio usuario puede marcar su local como favorito
+      const venueProfile = await this.usersService['venueProfileRepository'].findOne({ where: { user_id: parseInt(venueId, 10) } });
+      if (!venueProfile) {
+        throw new ForbiddenException('Local no encontrado');
+      }
+      venueProfile.favorite = body.favorite;
+      await this.usersService['venueProfileRepository'].save(venueProfile);
+      return { message: body.favorite ? 'Marcado como favorito' : 'Desmarcado como favorito' };
+    }
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me') // GET /api/users/me (Todos los roles autenticados pueden acceder)

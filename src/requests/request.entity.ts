@@ -1,3 +1,9 @@
+// Enum para quién cierra la solicitud
+export enum ClosedBy {
+  ARTIST = 'artist',
+  MANAGER = 'manager',
+  NONE = 'none',
+}
 import { 
   Entity, 
   PrimaryGeneratedColumn, 
@@ -58,6 +64,14 @@ export class Request {
     default: RequestStatus.PENDIENTE 
   })
   status: RequestStatus;
+
+  // Quién cerró la fecha (artist o manager)
+  @Column({
+    type: 'enum',
+    enum: ClosedBy,
+    default: ClosedBy.NONE,
+  })
+  closed_by: ClosedBy;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

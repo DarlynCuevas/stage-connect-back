@@ -5,6 +5,7 @@ import { ManagerRequest, ManagerRequestStatus } from './manager-request.entity';
 import { CreateManagerRequestDto } from './dto/create-manager-request.dto';
 import { UpdateManagerRequestStatusDto } from './dto/update-manager-request-status.dto';
 import { User } from '../users/user.entity';
+import { ArtistProfile } from '../users/artist-profile.entity';
 import { ManagerRequestsGateway } from './manager-requests.gateway';
 
 @Injectable()
@@ -14,6 +15,8 @@ export class ManagerRequestsService {
     private readonly managerRequestsRepository: Repository<ManagerRequest>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(ArtistProfile)
+    private readonly artistProfileRepository: Repository<ArtistProfile>,
     private readonly managerRequestsGateway: ManagerRequestsGateway,
   ) {}
 
@@ -49,8 +52,13 @@ export class ManagerRequestsService {
     }
 
     // Si el sender es artista, validar que no tenga manager
-    if (sender.role === 'Artista' && sender.managerId) {
-      throw new BadRequestException('Ya tienes un manager asignado.');
+    if (sender.role === 'Artista') {
+      const senderProfile = await this.artistProfileRepository.findOne({
+        where: { user_id: currentUserId },
+      });
+      if (senderProfile?.managerId) {
+        throw new BadRequestException('Ya tienes un manager asignado.');
+      }
     }
 
     // Verificar que no exista una solicitud pendiente entre estos usuarios
@@ -149,31 +157,38 @@ export class ManagerRequestsService {
 
     // Si se acepta, establecer la relación manager-artista
     if (statusDto.status === ManagerRequestStatus.ACEPTADA) {
-      let artistUser: User;
+      let artistUserId: number;
       let managerId: number;
 
       if (request.sender.role === 'Manager') {
-        artistUser = request.receiver;
+        artistUserId = request.receiver.user_id;
         managerId = request.sender.user_id;
       } else {
-        artistUser = request.sender;
+        artistUserId = request.sender.user_id;
         managerId = request.receiver.user_id;
       }
 
       // Verificar nuevamente que el artista no tenga manager
-      const currentArtist = await this.usersRepository.findOne({
-        where: { user_id: artistUser.user_id },
+      const artistProfile = await this.artistProfileRepository.findOne({
+        where: { user_id: artistUserId },
       });
 
-      if (currentArtist?.managerId) {
+      if (artistProfile?.managerId) {
         throw new BadRequestException('El artista ya tiene un manager asignado.');
       }
 
       // Asignar manager al artista
-      await this.usersRepository.update(
-        { user_id: artistUser.user_id },
-        { managerId: managerId }
-      );
+      if (artistProfile) {
+        artistProfile.managerId = managerId;
+        await this.artistProfileRepository.save(artistProfile);
+      } else {
+        // Si no existe el perfil, crearlo con el managerId
+        const newProfile = this.artistProfileRepository.create({
+          user_id: artistUserId,
+          managerId: managerId,
+        });
+        await this.artistProfileRepository.save(newProfile);
+      }
     }
 
     // Actualizar el estado
@@ -266,25 +281,28 @@ export class ManagerRequestsService {
       throw new NotFoundException('Artista no encontrado.');
     }
 
-    if (!artist.managerId) {
+    // Get artist profile
+    const artistProfile = await this.artistProfileRepository.findOne({
+      where: { user_id: artistId },
+    });
+
+    if (!artistProfile?.managerId) {
       throw new BadRequestException('Este artista no tiene manager.');
     }
 
     // Validar que el usuario actual es el manager o el artista
-    const isManager = artist.managerId === currentUserId;
+    const isManager = artistProfile.managerId === currentUserId;
     const isArtist = artist.user_id === currentUserId;
 
     if (!isManager && !isArtist) {
       throw new ForbiddenException('No tienes permiso para eliminar esta relación.');
     }
 
-    const currentManagerId = artist.managerId;
+    const currentManagerId = artistProfile.managerId;
 
     // Eliminar la relación
-    await this.usersRepository.update(
-      { user_id: artistId },
-      { managerId: () => 'NULL' }
-    );
+    artistProfile.managerId = undefined;
+    await this.artistProfileRepository.save(artistProfile);
 
     if (currentManagerId) {
       this.managerRequestsGateway.emitRelationRemoved({

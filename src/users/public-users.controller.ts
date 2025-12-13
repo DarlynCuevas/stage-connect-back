@@ -51,4 +51,5 @@ export class PublicUsersController {
     const users = await this.usersService.findByRoleWithFilters(role, filters);
     return users.map((u) => this.mapUser(u)).filter(Boolean);
   }
+
 }

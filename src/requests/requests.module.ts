@@ -2,13 +2,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Request } from './request.entity';
 import { User } from '../users/user.entity';
+import { ArtistProfile } from '../users/artist-profile.entity';
 import { RequestsService } from './requests.service';
 import { RequestsController } from './requests.controller';
 import { RequestsGateway } from './requests.gateway';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Request, User]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Request, User, ArtistProfile]), AuthModule],
   providers: [RequestsService, RequestsGateway],
   controllers: [RequestsController],
   exports: [RequestsService],

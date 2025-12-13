@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Between } from 'typeorm';
-import { Request, RequestStatus } from './request.entity';
+import { Request, RequestStatus, ClosedBy } from './request.entity';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 import { User } from '../users/user.entity';
+import { ArtistProfile } from '../users/artist-profile.entity';
 import { RequestsGateway } from './requests.gateway';
 
 @Injectable()
@@ -14,6 +15,8 @@ export class RequestsService {
     private readonly requestsRepository: Repository<Request>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(ArtistProfile)
+    private readonly artistProfileRepository: Repository<ArtistProfile>,
     private readonly requestsGateway: RequestsGateway,
   ) {}
 
@@ -62,11 +65,16 @@ export class RequestsService {
 
     const saved = await this.requestsRepository.save(request);
 
+    // Get artist profile for managerId
+    const artistProfile = await this.artistProfileRepository.findOne({
+      where: { user_id: artist.user_id },
+    });
+
     // Emitir evento en tiempo real al artista
     this.requestsGateway.emitRequestCreated({
       id: saved.id,
       artistId: artist.user_id,
-      managerId: artist.managerId,
+      managerId: artistProfile?.managerId,
       requesterId: requester.user_id,
       eventDate: saved.eventDate?.toString?.() || String(saved.eventDate),
       eventLocation: saved.eventLocation,
@@ -125,9 +133,14 @@ export class RequestsService {
   ): Promise<Request> {
     const request = await this.findOne(requestId);
 
+    // Get artist profile to check managerId
+    const artistProfile = await this.artistProfileRepository.findOne({
+      where: { user_id: request.artist.user_id },
+    });
+
     // Validar que el usuario autenticado es el artista o su manager
     const artistOwnerId = request.artist.user_id;
-    const artistManagerId = request.artist.managerId;
+    const artistManagerId = artistProfile?.managerId;
     const isArtist = artistOwnerId === currentUserId;
     const isManager = artistManagerId && artistManagerId === currentUserId;
 
@@ -140,15 +153,23 @@ export class RequestsService {
       throw new BadRequestException('Solo se pueden cambiar solicitudes en estado PENDIENTE.');
     }
 
-    // Actualizar el estado
+
+    // Actualizar el estado y quién cierra
     request.status = statusDto.status;
+    if (statusDto.status === RequestStatus.ACEPTADA) {
+      if (isArtist) {
+        request.closed_by = ClosedBy.ARTIST;
+      } else if (isManager) {
+        request.closed_by = ClosedBy.MANAGER;
+      }
+    }
     const saved = await this.requestsRepository.save(request);
 
     // Emitir evento de actualización a artista y manager
     this.requestsGateway.emitRequestUpdated({
       id: saved.id,
       artistId: saved.artist.user_id,
-      managerId: saved.artist.managerId || undefined,
+      managerId: artistProfile?.managerId || undefined,
       status: saved.status,
       updatedAt: saved.updatedAt?.toISOString?.(),
     });
@@ -195,18 +216,18 @@ export class RequestsService {
    * Obtener todas las solicitudes para los artistas de un manager
    */
   async findByManagerId(managerId: number): Promise<Request[]> {
-    // Primero obtener todos los artistas del manager
-    const artists = await this.usersRepository.find({
+    // Primero obtener todos los perfiles de artistas del manager
+    const artistProfiles = await this.artistProfileRepository.find({
       where: {
         managerId: managerId,
       },
     });
 
-    if (artists.length === 0) {
+    if (artistProfiles.length === 0) {
       return [];
     }
 
-    const artistIds = artists.map(a => a.user_id);
+    const artistIds = artistProfiles.map(p => p.user_id);
 
     // Obtener todas las solicitudes para estos artistas
     return this.requestsRepository
@@ -228,17 +249,14 @@ export class RequestsService {
   }> {
     console.log('🔍 [getManagerStats] Manager ID:', managerId, 'Type:', typeof managerId);
     
-    // Obtener artistas del manager usando query builder para mayor control
-    const artists = await this.usersRepository
-      .createQueryBuilder('user')
-      .where('user.managerId = :managerId', { managerId: Number(managerId) })
-      .andWhere('user.role = :role', { role: 'Artista' })
-      .getMany();
+    // Obtener perfiles de artistas del manager
+    const artistProfiles = await this.artistProfileRepository.find({
+      where: { managerId: Number(managerId) },
+    });
 
-    console.log('🎨 [getManagerStats] Artists found:', artists.length);
-    console.log('🎨 [getManagerStats] Artists:', artists.map(a => ({ id: a.user_id, name: a.name, managerId: a.managerId })));
+    console.log('🎨 [getManagerStats] Artist profiles found:', artistProfiles.length);
 
-    if (artists.length === 0) {
+    if (artistProfiles.length === 0) {
       console.log('⚠️ [getManagerStats] No artists found for manager');
       return {
         pendingRequests: 0,
@@ -247,7 +265,7 @@ export class RequestsService {
       };
     }
 
-    const artistIds = artists.map(a => a.user_id);
+    const artistIds = artistProfiles.map(p => p.user_id);
     console.log('🎯 [getManagerStats] Artist IDs:', artistIds);
 
     // Solicitudes pendientes - usar query builder para mayor visibilidad

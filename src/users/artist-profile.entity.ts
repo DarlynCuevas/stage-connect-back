@@ -1,0 +1,89 @@
+import { Entity, Column, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
+
+@Entity('artist_profiles')
+export class ArtistProfile {
+  @PrimaryColumn({ name: 'user_id' })
+  user_id: number;
+
+  @OneToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
+  @Column({ name: 'nick_name', type: 'varchar', length: 100, nullable: true })
+  nickName?: string;
+
+  @Column({ type: 'simple-array', nullable: true })
+  genre?: string[];
+
+  @Column({ name: 'base_price', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  basePrice?: number;
+
+  @Column({ type: 'float', default: 0, nullable: true })
+  rating?: number;
+
+  @Column({ name: 'total_shows', type: 'int', default: 0, nullable: true })
+  totalShows?: number;
+
+  @Column({ type: 'boolean', default: false })
+  verified?: boolean;
+
+  @Column({ name: 'manager_id', type: 'int', nullable: true })
+  managerId?: number;
+
+  @Column({ type: 'simple-json', nullable: true })
+  socialLinks?: { instagram?: string; youtube?: string; spotify?: string; tiktok?: string };
+
+  @Column({ type: 'simple-array', nullable: true })
+  gallery?: string[];
+
+  // Credibilidad y Experiencia
+  @Column({ name: 'years_of_experience', type: 'int', nullable: true })
+  yearsOfExperience?: number;
+
+  @Column({ type: 'simple-array', nullable: true })
+  achievements?: string[];
+
+  @Column({ type: 'simple-array', nullable: true })
+  certifications?: string[];
+
+  // Multimedia
+  @Column({ name: 'showreel_url', type: 'text', nullable: true })
+  showreelUrl?: string;
+
+  @Column({ name: 'spotify_url', type: 'text', nullable: true })
+  spotifyUrl?: string;
+
+  @Column({ name: 'youtube_channel', type: 'text', nullable: true })
+  youtubeChannel?: string;
+
+  // Información Técnica
+  @Column({ name: 'technical_rider', type: 'text', nullable: true })
+  technicalRider?: string;
+
+  @Column({ type: 'simple-array', nullable: true })
+  equipment?: string[];
+
+  @Column({ name: 'setup_time', type: 'varchar', length: 50, nullable: true })
+  setupTime?: string;
+
+  // Cobertura
+  @Column({ type: 'simple-array', nullable: true })
+  languages?: string[];
+
+  @Column({ name: 'coverage_areas', type: 'simple-array', nullable: true })
+  coverageAreas?: string[];
+
+  @Column({ name: 'willing_to_travel', type: 'boolean', default: false })
+  willingToTravel?: boolean;
+
+  // Profesional
+  @Column({ name: 'performance_types', type: 'simple-array', nullable: true })
+  performanceTypes?: string[];
+
+  @Column({ name: 'audience_size', type: 'varchar', length: 50, nullable: true })
+  audienceSize?: string;
+
+  @Column({ name: 'set_duration', type: 'varchar', length: 50, nullable: true })
+  setDuration?: string;
+}

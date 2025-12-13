@@ -1,6 +1,10 @@
 // Archivo: src/users/user.entity.ts
 
-import { Entity, Column, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, Unique, OneToOne } from 'typeorm';
+import { ArtistProfile } from './artist-profile.entity';
+import { ManagerProfile } from './manager-profile.entity';
+import { VenueProfile } from './venue-profile.entity';
+import { PromoterProfile } from './promoter-profile.entity';
 
 // Definición de los roles (igual que en la base de datos)
 export type UserRole = 'Artista' | 'Manager' | 'Local' | 'Promotor';
@@ -30,15 +34,9 @@ export class User {
   @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
-  // Artist profile fields (nullable for non-artist users)
-  @Column({ name: 'nick_name', type: 'varchar', length: 100, nullable: true })
-  nickName?: string;
-
+  // Common profile fields (shared by all roles)
   @Column({ type: 'text', nullable: true })
   bio?: string;
-
-  @Column({ type: 'simple-array', nullable: true })
-  genre?: string[];
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   country?: string;
@@ -46,33 +44,25 @@ export class User {
   @Column({ type: 'varchar', length: 100, nullable: true })
   city?: string;
 
-  @Column({ name: 'base_price', type: 'decimal', precision: 10, scale: 2, nullable: true })
-  basePrice?: number;
-
   @Column({ type: 'varchar', length: 500, nullable: true })
   avatar?: string;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   banner?: string;
 
-  @Column({ type: 'float', default: 0, nullable: true })
-  rating?: number;
-
-  @Column({ name: 'total_shows', type: 'int', default: 0, nullable: true })
-  totalShows?: number;
-
-  @Column({ type: 'boolean', default: false })
-  verified?: boolean;
-
   @Column({ type: 'varchar', length: 20, nullable: true })
   gender?: string;
 
-  @Column({ name: 'manager_id', type: 'int', nullable: true })
-  managerId?: number;
+  // Relations to profile tables (1-to-1)
+  @OneToOne(() => ArtistProfile, (profile) => profile.user, { eager: false })
+  artistProfile?: ArtistProfile;
 
-  @Column({ type: 'simple-json', nullable: true })
-  socialLinks?: { instagram?: string; youtube?: string; spotify?: string; tiktok?: string };
+  @OneToOne(() => ManagerProfile, (profile) => profile.user, { eager: false })
+  managerProfile?: ManagerProfile;
 
-  @Column({ type: 'simple-array', nullable: true })
-  gallery?: string[];
+  @OneToOne(() => VenueProfile, (profile) => profile.user, { eager: false })
+  venueProfile?: VenueProfile;
+
+  @OneToOne(() => PromoterProfile, (profile) => profile.user, { eager: false })
+  promoterProfile?: PromoterProfile;
 }
