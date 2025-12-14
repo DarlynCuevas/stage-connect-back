@@ -11,6 +11,7 @@ import { RequestsModule } from './requests/requests.module';
 import { BlockedDaysModule } from './blocked-days/blocked-days.module';
 import { ManagerRequestsModule } from './manager-requests/manager-requests.module';
 import { PublicController } from './public.controller';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { PublicController } from './public.controller';
     BlockedDaysModule,
     ManagerRequestsModule,
     JwtModule,
+    ReviewsModule,
   ],
   controllers: [PublicController],
   providers: [],

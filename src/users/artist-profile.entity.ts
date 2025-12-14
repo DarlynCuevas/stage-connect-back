@@ -15,6 +15,8 @@ export class ArtistProfile {
 
   @Column({ type: 'simple-array', nullable: true })
   genre?: string[];
+  @Column({ name: 'total_income_this_year', type: 'decimal', precision: 15, scale: 2, default: 0 })
+  totalIncomeThisYear?: number;
 
   @Column({ name: 'base_price', type: 'decimal', precision: 10, scale: 2, nullable: true })
   basePrice?: number;
