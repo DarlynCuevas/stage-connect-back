@@ -1,3 +1,4 @@
+
 import { Entity, Column, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
 
@@ -12,6 +13,9 @@ export class ArtistProfile {
 
   @Column({ name: 'nick_name', type: 'varchar', length: 100, nullable: true })
   nickName?: string;
+
+  @Column({ type: 'boolean', default: false })
+  featured?: boolean;
 
   @Column({ type: 'simple-array', nullable: true })
   genre?: string[];

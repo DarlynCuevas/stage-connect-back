@@ -31,6 +31,8 @@ export class PublicUsersController {
     @Query('city') city?: string,
     @Query('priceMin') priceMin?: string,
     @Query('priceMax') priceMax?: string,
+    @Query('featured') featured?: string,
+    @Query('verified') verified?: string,
   ) {
     if (!role) {
       return [];
@@ -48,6 +50,8 @@ export class PublicUsersController {
     if (priceMin) filters.priceMin = parseFloat(priceMin);
     if (priceMax) filters.priceMax = parseFloat(priceMax);
 
+    if (featured !== undefined) filters.featured = featured === 'true';
+    if (verified !== undefined) filters.verified = verified === 'true';
     const users = await this.usersService.findByRoleWithFilters(role, filters);
     return users.map((u) => this.mapUser(u)).filter(Boolean);
   }

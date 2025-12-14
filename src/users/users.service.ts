@@ -407,6 +407,14 @@ export class UsersService {
         });
       }
 
+      if (filters.featured !== undefined) {
+        filtered = filtered.filter(u => u.featured === filters.featured);
+      }
+
+      if (filters.verified !== undefined) {
+        filtered = filtered.filter(u => u.verified === filters.verified);
+      }
+
       return filtered;
     }
 

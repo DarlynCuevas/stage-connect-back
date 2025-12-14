@@ -31,4 +31,32 @@ export class PublicController {
     const venues = await this.usersService.findByRoleWithFilters('Local', filters);
     return venues.map((u) => this.mapUser(u)).filter(Boolean);
   }
+  @Get('users')
+  async getAllUsers(
+    @Query('role') role?: string,
+    @Query('genre') genre?: string[] | string,
+    @Query('country') country?: string,
+    @Query('city') city?: string,
+    @Query('priceMin') priceMin?: string,
+    @Query('priceMax') priceMax?: string,
+    @Query('query') query?: string,
+  ) {
+    // Solo soportamos role=Artista por ahora
+    if (role !== 'Artista') return [];
+    // Normalizar géneros
+    let genreArr: string[] = [];
+    if (Array.isArray(genre)) genreArr = genre;
+    else if (typeof genre === 'string' && genre.length > 0) genreArr = [genre];
+    // Filtros
+    const filters: any = {
+      genre: genreArr,
+      country,
+      city,
+      priceMin: priceMin ? Number(priceMin) : undefined,
+      priceMax: priceMax ? Number(priceMax) : undefined,
+      query,
+    };
+    const artists = await this.usersService.findByRoleWithFilters('Artista', filters);
+    return artists.map((u) => this.mapUser(u)).filter(Boolean);
+  }
 }
