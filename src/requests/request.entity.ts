@@ -40,6 +40,13 @@ export class Request {
   // Fecha del evento solicitado
   @Column({ type: 'date', nullable: false })
   eventDate: Date;
+    // Nombre del local
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    nombreLocal: string;
+
+    // Ciudad del local
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    ciudadLocal: string;
 
   // Ubicación del evento
   @Column({ type: 'varchar', length: 255, nullable: false })

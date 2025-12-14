@@ -52,16 +52,18 @@ export class RequestsService {
     }
 
     // Crear y guardar la solicitud
-    const request = this.requestsRepository.create({
-      artist,
-      requester,
-      eventDate: parsedEventDate,
-      eventLocation,
-      eventType,
-      offeredPrice,
-      message,
-      status: RequestStatus.PENDIENTE,
-    });
+      const request = this.requestsRepository.create({
+        artist,
+        requester,
+        eventDate: parsedEventDate,
+        eventLocation,
+        eventType,
+        offeredPrice,
+        message,
+        nombreLocal: createRequestDto.nombreLocal,
+        ciudadLocal: createRequestDto.ciudadLocal,
+        status: RequestStatus.PENDIENTE,
+      });
 
     const saved = await this.requestsRepository.save(request);
 
@@ -138,13 +140,14 @@ export class RequestsService {
       where: { user_id: request.artist.user_id },
     });
 
-    // Validar que el usuario autenticado es el artista o su manager
+    // Validar que el usuario autenticado es el artista, su manager o el requester (Local)
     const artistOwnerId = request.artist.user_id;
     const artistManagerId = artistProfile?.managerId;
     const isArtist = artistOwnerId === currentUserId;
     const isManager = artistManagerId && artistManagerId === currentUserId;
+    const isRequester = request.requester?.user_id === currentUserId;
 
-    if (!isArtist && !isManager) {
+    if (!isArtist && !isManager && !isRequester) {
       throw new ForbiddenException('No tienes permiso para modificar esta solicitud.');
     }
 

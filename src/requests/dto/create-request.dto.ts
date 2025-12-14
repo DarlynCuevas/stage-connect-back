@@ -25,7 +25,15 @@ export class CreateRequestDto {
   @IsNumber()
   offeredPrice: number;
 
-  @IsOptional()
-  @IsString()
-  message?: string;
+    @IsOptional()
+    @IsString()
+    message?: string;
+
+    @IsOptional()
+    @IsString()
+    nombreLocal?: string;
+
+    @IsOptional()
+    @IsString()
+    ciudadLocal?: string;
 }

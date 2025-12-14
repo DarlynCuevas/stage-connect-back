@@ -66,7 +66,7 @@ export class RequestsController {
    * PATCH /requests/:id/status
    * Actualizar el estado de una solicitud (artista o su manager)
    */
-  @Roles('Artista', 'Manager')
+  @Roles('Artista', 'Manager', 'Local')
   @Patch(':id/status')
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
