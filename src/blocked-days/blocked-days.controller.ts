@@ -14,7 +14,7 @@ export class BlockedDaysController {
    */
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Artista', 'Manager')
+  @Roles('Artista', 'Manager', 'Local')
   async create(
     @Body() body: { blockedDate: string },
     @Request() req,
