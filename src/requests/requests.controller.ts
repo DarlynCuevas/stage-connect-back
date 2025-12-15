@@ -54,6 +54,15 @@ export class RequestsController {
   }
 
   /**
+   * GET /requests/confirmed-venue/:venueId
+   * Obtener todas las solicitudes confirmadas de un venue (local/promotor)
+   */
+  @Get('confirmed-venue/:venueId')
+  async getConfirmedRequestsByVenue(@Param('venueId', ParseIntPipe) venueId: number) {
+    return this.requestsService.findConfirmedByVenueId(venueId);
+  }
+
+  /**
    * GET /requests/:id
    * Obtener una solicitud específica por ID
    */

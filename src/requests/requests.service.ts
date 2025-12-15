@@ -21,6 +21,24 @@ export class RequestsService {
   ) {}
 
   /**
+   * Obtener todas las solicitudes confirmadas de un venue (solo las aceptadas)
+   */
+  async findConfirmedByVenueId(venueUserId: number): Promise<Request[]> {
+    return this.requestsRepository.find({
+      where: {
+        requester: {
+          user_id: venueUserId,
+        },
+        status: RequestStatus.ACEPTADA,
+      },
+      relations: ['artist', 'requester'],
+      order: {
+        eventDate: 'ASC',
+      },
+    });
+  }
+
+  /**
    * Crear una nueva solicitud de booking
    */
   async create(createRequestDto: CreateRequestDto, currentUserId: number): Promise<Request> {
