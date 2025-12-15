@@ -65,4 +65,7 @@ export class User {
 
   @OneToOne(() => PromoterProfile, (profile) => profile.user, { eager: false })
   promoterProfile?: PromoterProfile;
+
+  // Relación con datos fiscales (1 a muchos)
+  fiscalData?: import('./user-fiscal-data.entity').UserFiscalData[];
 }

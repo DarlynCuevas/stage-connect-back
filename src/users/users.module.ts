@@ -12,6 +12,9 @@ import { UsersController } from './users.controller';
 import { PublicUsersController } from './public-users.controller';
 import { Request } from '../requests/request.entity';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
+import { UserFiscalData } from './user-fiscal-data.entity';
+import { UserFiscalDataService } from './user-fiscal-data.service';
+import { UserFiscalDataController } from './user-fiscal-data.controller';
 
 @Module({
   imports: [
@@ -22,11 +25,12 @@ import { BlockedDay } from '../blocked-days/blocked-day.entity';
       VenueProfile,
       PromoterProfile,
       Request, 
-      BlockedDay
+      BlockedDay,
+      UserFiscalData
     ]), 
   ],
-  providers: [UsersService],
-  controllers: [UsersController, PublicUsersController],
+  providers: [UsersService, UserFiscalDataService],
+  controllers: [UsersController, PublicUsersController, UserFiscalDataController],
   exports: [UsersService, TypeOrmModule],
 })
 export class UsersModule {}

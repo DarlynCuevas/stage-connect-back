@@ -331,11 +331,51 @@ export class UsersService {
     qb.where('user.role = :role', { role });
 
     if (filters.query) {
-      const q = `%${filters.query.toLowerCase()}%`;
-      qb.andWhere(
-        '(LOWER(user.name) LIKE :q OR LOWER(user.email) LIKE :q)',
-        { q },
-      );
+      // Buscar por cada palabra del query (AND lógico, todos los parámetros aplicados correctamente)
+      const words = filters.query
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .split(/\s+/)
+        .map(w => w.trim())
+        .filter(Boolean);
+      if (words.length > 0) {
+        const params: Record<string, string> = {};
+        if (words.length === 1) {
+          // Solo una palabra o fragmento: buscar tal cual
+          params['q'] = `%${words[0]}%`;
+          if (role === 'Local') {
+            qb.andWhere(`(unaccent(LOWER(user.name)) ILIKE unaccent(:q) OR unaccent(LOWER(user.email)) ILIKE unaccent(:q))`, params);
+          } else if (role === 'Artista') {
+            qb.andWhere(`(
+              unaccent(LOWER(user.name)) ILIKE unaccent(:q)
+              OR unaccent(LOWER(user.email)) ILIKE unaccent(:q)
+              OR unaccent(LOWER(user.city)) ILIKE unaccent(:q)
+            )`, params);
+          } else {
+            qb.andWhere(`(unaccent(LOWER(user.name)) ILIKE unaccent(:q) OR unaccent(LOWER(user.email)) ILIKE unaccent(:q))`, params);
+          }
+        } else {
+          // Varias palabras: buscar cada una como OR
+          const orConditions: string[] = [];
+          words.forEach((word, idx) => {
+            const param = `q${idx}`;
+            params[param] = `%${word}%`;
+            if (role === 'Local') {
+              orConditions.push(`(unaccent(LOWER(user.name)) ILIKE unaccent(:${param}) OR unaccent(LOWER(user.email)) ILIKE unaccent(:${param}))`);
+            } else if (role === 'Artista') {
+              orConditions.push(`(
+                unaccent(LOWER(user.name)) ILIKE unaccent(:${param})
+                OR unaccent(LOWER(user.email)) ILIKE unaccent(:${param})
+                OR unaccent(LOWER(user.city)) ILIKE unaccent(:${param})
+              )`);
+            } else {
+              orConditions.push(`(unaccent(LOWER(user.name)) ILIKE unaccent(:${param}) OR unaccent(LOWER(user.email)) ILIKE unaccent(:${param}))`);
+            }
+          });
+          qb.andWhere(orConditions.join(' OR '), params);
+        }
+      }
     }
 
     if (filters.country) {
@@ -413,6 +453,16 @@ export class UsersService {
 
       if (filters.verified !== undefined) {
         filtered = filtered.filter(u => u.verified === filters.verified);
+      }
+
+      // Si hay query, filtrar también por nickName y bio en el perfil
+      if (filters.query && filters.query.trim() !== '') {
+        const q = filters.query.trim().toLowerCase();
+        filtered = filtered.filter(u =>
+          (u.nickName && u.nickName.toLowerCase().includes(q))
+          || (u.bio && u.bio.toLowerCase().includes(q))
+          || (u.city && u.city.toLowerCase().includes(q))
+        );
       }
 
       return filtered;
