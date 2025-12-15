@@ -2,7 +2,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, Between } from 'typeorm';
 import { User, UserRole } from './user.entity';
 import { ArtistProfile } from './artist-profile.entity';
 import { ManagerProfile } from './manager-profile.entity';
@@ -392,10 +392,43 @@ export class UsersService {
 
     // For venues, filter by featured/verified at profile level
     if (role === 'Local') {
+
+      const now = new Date();
+      const futureLimit = new Date(now);
+      futureLimit.setDate(now.getDate() + 60); // próximos 60 días
+
+      // Obtener todos los user_id de los venues
+      const venueIds = users.map(u => u.user_id);
+      // Traer todos los días bloqueados de todos los venues en una sola consulta
+      const allBlockedDays = await this.blockedDaysRepository.find({
+        where: {
+          artist: { user_id: In(venueIds) },
+          blockedDate: Between(now, futureLimit),
+        },
+      });
+      // Mapear por artist_id
+      const blockedDaysMap: Record<number, string[]> = {};
+      allBlockedDays.forEach(bd => {
+        const id = bd.artist.user_id;
+        if (!blockedDaysMap[id]) blockedDaysMap[id] = [];
+        let dateStr: string;
+        if (bd.blockedDate instanceof Date) {
+          dateStr = bd.blockedDate.toISOString().slice(0, 10);
+        } else {
+          // Si es string (por ejemplo, 'YYYY-MM-DD'), úsalo directamente
+          dateStr = String(bd.blockedDate).slice(0, 10);
+        }
+        blockedDaysMap[id].push(dateStr);
+      });
+
       const usersWithProfiles = await Promise.all(
         users.map(async (user) => {
           const profile = await this.venueProfileRepository.findOne({ where: { user_id: user.user_id } });
-          return { ...user, ...profile };
+          return {
+            ...user,
+            ...profile,
+            blockedDays: blockedDaysMap[user.user_id] || [],
+          };
         })
       );
 

@@ -7,6 +7,7 @@ import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 import { User } from '../users/user.entity';
 import { ArtistProfile } from '../users/artist-profile.entity';
 import { RequestsGateway } from './requests.gateway';
+import { BlockedDay } from '../blocked-days/blocked-day.entity';
 
 @Injectable()
 export class RequestsService {
@@ -17,6 +18,8 @@ export class RequestsService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(ArtistProfile)
     private readonly artistProfileRepository: Repository<ArtistProfile>,
+    @InjectRepository(BlockedDay)
+    private readonly blockedDayRepository: Repository<BlockedDay>,
     private readonly requestsGateway: RequestsGateway,
   ) {}
 
@@ -67,6 +70,30 @@ export class RequestsService {
     const parsedEventDate = new Date(eventDate);
     if (isNaN(parsedEventDate.getTime())) {
       throw new BadRequestException('Fecha de evento inválida.');
+    }
+
+    // Validar que el venue (si el requester es Local) no tenga el día bloqueado
+    if (requester.role === 'Local') {
+      const blockedDays = await this.blockedDayRepository.find({
+        where: {
+          artist: { user_id: requester.user_id },
+          blockedDate: parsedEventDate,
+        },
+      });
+      if (blockedDays.length > 0) {
+        throw new BadRequestException('El local no está disponible en la fecha seleccionada.');
+      }
+    }
+
+    // Validar que el artista no tenga el día bloqueado
+    const artistBlockedDays = await this.blockedDayRepository.find({
+      where: {
+        artist: { user_id: artist.user_id },
+        blockedDate: parsedEventDate,
+      },
+    });
+    if (artistBlockedDays.length > 0) {
+      throw new BadRequestException('El artista no está disponible en la fecha seleccionada.');
     }
 
     // Crear y guardar la solicitud
