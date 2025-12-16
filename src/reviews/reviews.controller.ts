@@ -23,6 +23,16 @@ export class ReviewsController {
     return { artistId: Number(artistId), averageRating: avg };
   }
 
+  // Devuelve averageRating y totalReviews en una sola llamada
+  @Get('artist/:artistId/summary')
+  async getArtistSummary(@Param('artistId') artistId: string) {
+    const [averageRating, totalReviews] = await Promise.all([
+      this.reviewsService.getAverageRatingForArtist(Number(artistId)),
+      this.reviewsService.countReviewsForArtist(Number(artistId)),
+    ]);
+    return { artistId: Number(artistId), averageRating, totalReviews };
+  }
+
   @Post()
   async createReview(@Body() createReviewDto: CreateReviewDto) {
     const review = await this.reviewsService.create(createReviewDto);
