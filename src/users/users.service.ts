@@ -447,12 +447,34 @@ export class UsersService {
 
     // For artists, load profiles and filter by artist-specific fields
     if (role === 'Artista') {
+      // Obtener todos los user_id de los artistas
+      const artistIds = users.map(u => u.user_id);
+      // Traer todos los días bloqueados de todos los artistas en una sola consulta
+      const allBlockedDays = await this.blockedDaysRepository.find({
+        where: {
+          artist: { user_id: In(artistIds) },
+        },
+      });
+      // Mapear por artist_id
+      const blockedDaysMap: Record<number, string[]> = {};
+      allBlockedDays.forEach(bd => {
+        const id = bd.artist.user_id;
+        if (!blockedDaysMap[id]) blockedDaysMap[id] = [];
+        let dateStr: string;
+        if (bd.blockedDate instanceof Date) {
+          dateStr = bd.blockedDate.toISOString().slice(0, 10);
+        } else {
+          dateStr = String(bd.blockedDate).slice(0, 10);
+        }
+        blockedDaysMap[id].push(dateStr);
+      });
+
       const usersWithProfiles = await Promise.all(
         users.map(async (user) => {
           const profile = await this.artistProfileRepository.findOne({
             where: { user_id: user.user_id },
           });
-          return { ...user, ...profile, managerId: profile?.managerId };
+          return { ...user, ...profile, managerId: profile?.managerId, blockedDays: blockedDaysMap[user.user_id] || [] };
         })
       );
 
