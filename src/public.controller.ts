@@ -1,3 +1,5 @@
+
+ 
 import { Controller, Get, Query } from '@nestjs/common';
 import { UsersService } from './users/users.service';
 
@@ -31,9 +33,8 @@ export class PublicController {
     const venues = await this.usersService.findByRoleWithFilters('Local', filters);
     return venues.map((u) => this.mapUser(u)).filter(Boolean);
   }
-  @Get('users')
-  async getAllUsers(
-    @Query('role') role?: string,
+  @Get('artists')
+  async getAllArtists(
     @Query('genre') genre?: string[] | string,
     @Query('country') country?: string,
     @Query('city') city?: string,
@@ -41,8 +42,6 @@ export class PublicController {
     @Query('priceMax') priceMax?: string,
     @Query('query') query?: string,
   ) {
-    // Solo soportamos role=Artista por ahora
-    if (role !== 'Artista') return [];
     // Normalizar géneros
     let genreArr: string[] = [];
     if (Array.isArray(genre)) genreArr = genre;
@@ -58,5 +57,41 @@ export class PublicController {
     };
     const artists = await this.usersService.findByRoleWithFilters('Artista', filters);
     return artists.map((u) => this.mapUser(u)).filter(Boolean);
+  }
+
+   @Get('managers')
+  async getAllManagers(
+    @Query('city') city?: string,
+    @Query('featured') featured?: string,
+    @Query('verified') verified?: string,
+    @Query('favorite') favorite?: string,
+    @Query('query') query?: string,
+  ) {
+    const filters: any = {};
+    if (city) filters.city = city;
+    if (featured !== undefined) filters.featured = featured === 'true';
+    if (verified !== undefined) filters.verified = verified === 'true';
+    if (favorite !== undefined) filters.favorite = favorite === 'true';
+    if (query) filters.query = query;
+    const managers = await this.usersService.findByRoleWithFilters('Manager', filters);
+    return managers.map((u) => this.mapUser(u)).filter(Boolean);
+  }
+
+    @Get('promoters')
+  async getAllPromoters(
+    @Query('city') city?: string,
+    @Query('featured') featured?: string,
+    @Query('verified') verified?: string,
+    @Query('favorite') favorite?: string,
+    @Query('query') query?: string,
+  ) {
+    const filters: any = {};
+    if (city) filters.city = city;
+    if (featured !== undefined) filters.featured = featured === 'true';
+    if (verified !== undefined) filters.verified = verified === 'true';
+    if (favorite !== undefined) filters.favorite = favorite === 'true';
+    if (query) filters.query = query;
+    const promoters = await this.usersService.findByRoleWithFilters('Promotor', filters);
+    return promoters.map((u) => this.mapUser(u)).filter(Boolean);
   }
 }

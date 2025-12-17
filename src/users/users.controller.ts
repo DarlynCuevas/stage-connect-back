@@ -12,13 +12,11 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // Endpoint público para búsqueda de locales desde perfil artista
-  @Get('venues-search')
-  async searchVenues(
+  // Endpoint público para búsqueda de managers desde perfil promotor
+  @Get('managers-search')
+  async searchManagers(
     @Query('query') query?: string,
     @Query('city') city?: string,
-    @Query('type') type?: string,
-    @Query('date') date?: string,
     @Query('featured') featured?: string,
     @Query('verified') verified?: string,
     @Query('favorite') favorite?: string,
@@ -27,22 +25,13 @@ export class UsersController {
     const filters: any = {};
     if (query) filters.query = query;
     if (city) filters.city = city;
-    if (type) filters.type = type;
     if (featured !== undefined) filters.featured = featured === 'true';
     if (verified !== undefined) filters.verified = verified === 'true';
     if (favorite !== undefined) filters.favorite = favorite === 'true';
 
-    // Buscar venues (rol Local) con filtros
-    let venues = await this.usersService.findByRoleWithFilters('Local', filters);
-
-    // Si hay filtro de fecha, filtrar por blockedDays en el resultado final
-    if (date) {
-      venues = venues.filter((venue: any) => {
-        if (!venue.blockedDays) return true;
-        return !venue.blockedDays.includes(date);
-      });
-    }
-    return venues;
+    // Buscar managers con filtros
+    let managers = await this.usersService.findByRoleWithFilters('Manager', filters);
+    return managers;
   }
 // ...existing code...
 
@@ -50,42 +39,10 @@ export class UsersController {
   async getProfile(@Request() req) {
     const userId = req.user.user_id;
     const fullUser = await this.usersService.findById(userId);
-    
     if (!fullUser) {
-      return {
-        message: 'Tu perfil (datos básicos del JWT):',
-        user: req.user,
-      };
+      throw new ForbiddenException('Usuario no encontrado');
     }
-    
-    return {
-      message: 'Tu perfil:',
-      user: fullUser,
-    };
-  }
-
-  @Patch('profile') // PATCH /api/users/profile
-  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
-    const userId = req.user.user_id;
-    const updatedUser = await this.usersService.updateProfile(userId, updateProfileDto);
-    return {
-      message: 'Perfil actualizado correctamente',
-      user: updatedUser,
-    };
-  }
-
-  @Delete(':id') // DELETE /api/users/:id
-  async deleteUser(@Request() req, @Param('id') id: string) {
-    const targetId = parseInt(id, 10);
-    const requesterId = req.user.user_id;
-
-    // Only allow deleting own account unless roles policy changes
-    if (requesterId !== targetId) {
-      throw new ForbiddenException('No autorizado para eliminar esta cuenta');
-    }
-
-    await this.usersService.deleteUser(targetId);
-    return { message: 'Cuenta eliminada correctamente' };
+    return fullUser;
   }
   
   // Endpoint: solo accesible para Managers
