@@ -72,8 +72,10 @@ export class PublicController {
     return artists.map((u) => this.mapUser(u)).filter(Boolean);
   }
 
-   @Get('managers')
+  @UseGuards(AuthGuard('jwt'))
+  @Get('managers')
   async getAllManagers(
+    @Request() req,
     @Query('city') city?: string,
     @Query('featured') featured?: string,
     @Query('verified') verified?: string,
@@ -87,7 +89,17 @@ export class PublicController {
     if (favorite !== undefined) filters.favorite = favorite === 'true';
     if (query) filters.query = query;
     const managers = await this.usersService.findByRoleWithFilters('Manager', filters);
-    return managers.map((u) => this.mapUser(u)).filter(Boolean);
+    // Obtener favoritos del usuario autenticado
+    const userId = req.user?.user_id;
+    let favoriteIds = new Set();
+    if (userId) {
+      const favorites = await this.usersService.getFavorites(userId);
+      favoriteIds = new Set(favorites.map(fav => fav.user_id));
+    }
+    return managers.map((u) => ({
+      ...this.mapUser(u),
+      favorite: favoriteIds.has(u.user_id),
+    })).filter(Boolean);
   }
 
     @Get('promoters')
