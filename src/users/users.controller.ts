@@ -1,4 +1,5 @@
 import { Controller, Get, Patch, Body, UseGuards, Request, Delete, Param, ForbiddenException, Query } from '@nestjs/common';
+import { Post } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -11,6 +12,43 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+  // Añadir un usuario a favoritos
+
+  @Post('favorites/:favoriteUserId')
+  async addFavorite(
+    @Request() req,
+    @Param('favoriteUserId') favoriteUserId: number
+  ) {
+    const userId = req.user.user_id;
+    return this.usersService.addFavorite(userId, favoriteUserId);
+  }
+
+  // Eliminar un usuario de favoritos
+
+  @Delete('favorites/:favoriteUserId')
+  async removeFavorite(
+    @Request() req,
+    @Param('favoriteUserId') favoriteUserId: number
+  ) {
+    const userId = req.user.user_id;
+    return this.usersService.removeFavorite(userId, favoriteUserId);
+  }
+
+  // Listar favoritos de un usuario
+
+  @Get('favorites')
+  async getFavorites(@Request() req) {
+    const userId = req.user.user_id;
+    return this.usersService.getFavorites(userId);
+  }
+
+  // Listar quién ha marcado a un usuario como favorito
+
+  @Get('favorited-by')
+  async getFavoritedBy(@Request() req) {
+    const userId = req.user.user_id;
+    return this.usersService.getFavoritedBy(userId);
+  }
 
   // Endpoint público para búsqueda de managers desde perfil promotor
   @Get('managers-search')

@@ -1,6 +1,6 @@
 // Archivo: src/users/user.entity.ts
 
-import { Entity, Column, PrimaryGeneratedColumn, Unique, OneToOne } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, Unique, OneToOne, ManyToMany, JoinTable } from 'typeorm';
 import { ArtistProfile } from './artist-profile.entity';
 import { ManagerProfile } from './manager-profile.entity';
 import { VenueProfile } from './venue-profile.entity';
@@ -68,4 +68,17 @@ export class User {
 
   // Relación con datos fiscales (1 a muchos)
   fiscalData?: import('./user-fiscal-data.entity').UserFiscalData[];
+
+  // Relación ManyToMany para favoritos (usuarios que este usuario ha marcado como favoritos)
+  @ManyToMany(() => User, (user) => user.favoritedBy)
+  @JoinTable({
+    name: 'user_favorites',
+    joinColumn: { name: 'user_id', referencedColumnName: 'user_id' },
+    inverseJoinColumn: { name: 'favorite_user_id', referencedColumnName: 'user_id' },
+  })
+  favorites: User[];
+
+  // Relación inversa: usuarios que han marcado a este usuario como favorito
+  @ManyToMany(() => User, (user) => user.favorites)
+  favoritedBy: User[];
 }

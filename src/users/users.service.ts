@@ -39,6 +39,41 @@ export class UsersService {
       .getOne();
   }
 
+    // Añadir un usuario a favoritos
+    async addFavorite(userId: number, favoriteUserId: number): Promise<any> {
+      if (userId === favoriteUserId) throw new Error('No puedes marcarte a ti mismo como favorito');
+      const user = await this.usersRepository.findOne({ where: { user_id: userId }, relations: ['favorites'] });
+      const favoriteUser = await this.usersRepository.findOne({ where: { user_id: favoriteUserId } });
+      if (!user || !favoriteUser) throw new Error('Usuario no encontrado');
+      if (user.favorites?.some(u => u.user_id === favoriteUserId)) return { message: 'Ya es favorito' };
+      user.favorites = [...(user.favorites || []), favoriteUser];
+      await this.usersRepository.save(user);
+      return { message: 'Favorito añadido' };
+    }
+
+    // Eliminar un usuario de favoritos
+    async removeFavorite(userId: number, favoriteUserId: number): Promise<any> {
+      const user = await this.usersRepository.findOne({ where: { user_id: userId }, relations: ['favorites'] });
+      if (!user) throw new Error('Usuario no encontrado');
+      user.favorites = (user.favorites || []).filter(u => u.user_id !== favoriteUserId);
+      await this.usersRepository.save(user);
+      return { message: 'Favorito eliminado' };
+    }
+
+    // Listar favoritos de un usuario
+    async getFavorites(userId: number): Promise<User[]> {
+      const user = await this.usersRepository.findOne({ where: { user_id: userId }, relations: ['favorites'] });
+      if (!user) throw new Error('Usuario no encontrado');
+      return user.favorites || [];
+    }
+
+    // Listar quién ha marcado a un usuario como favorito
+    async getFavoritedBy(userId: number): Promise<User[]> {
+      const user = await this.usersRepository.findOne({ where: { user_id: userId }, relations: ['favoritedBy'] });
+      if (!user) throw new Error('Usuario no encontrado');
+      return user.favoritedBy || [];
+    }
+
   // Método usado por AuthService para crear el registro
   async create(createUserDto: CreateUserInterface): Promise<User> {
     const newUser = this.usersRepository.create(createUserDto); 
