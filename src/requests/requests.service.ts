@@ -46,6 +46,13 @@ export class RequestsService {
    */
   async create(createRequestDto: CreateRequestDto, currentUserId: number): Promise<Request> {
     const { artistId, eventDate, eventLocation, eventType, offeredPrice, message } = createRequestDto;
+
+    const parsedEventDate = new Date(eventDate);
+    if (isNaN(parsedEventDate.getTime())) {
+      throw new BadRequestException('Fecha de evento inválida.');
+    }
+
+
     // Validar que no exista ya una solicitud pendiente para el mismo artista, requester y fecha
     const existingPending = await this.requestsRepository.findOne({
       where: {
@@ -80,10 +87,7 @@ export class RequestsService {
       throw new NotFoundException('El solicitante no existe.');
     }
 
-    const parsedEventDate = new Date(eventDate);
-    if (isNaN(parsedEventDate.getTime())) {
-      throw new BadRequestException('Fecha de evento inválida.');
-    }
+    // parsedEventDate ya declarado arriba
 
     // Validar que el venue (si el requester es Local) no tenga el día bloqueado
     if (requester.role === 'Local') {
