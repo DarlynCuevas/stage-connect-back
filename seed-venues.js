@@ -1,6 +1,9 @@
 const { DataSource } = require('typeorm');
 const { User } = require('./src/users/user.entity');
 const { VenueProfile } = require('./src/users/venue-profile.entity');
+const { DataSource } = require('typeorm');
+const { User } = require('./src/users/user.entity');
+const { VenueProfile } = require('./src/users/venue-profile.entity');
 
 // Configuración de la base de datos
 const AppDataSource = new DataSource({
@@ -396,3 +399,4 @@ async function seedVenues() {
 }
 
 seedVenues();
+export {};

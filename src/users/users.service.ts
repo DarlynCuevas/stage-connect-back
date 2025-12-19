@@ -8,6 +8,7 @@ import { ArtistProfile } from './artist-profile.entity';
 import { ManagerProfile } from './manager-profile.entity';
 import { VenueProfile } from './venue-profile.entity';
 import { PromoterProfile } from './promoter-profile.entity';
+import { discoveryBlocks } from './discovery.utils';
 import { CreateUserInterface } from './dto/create-user.interface';
 import { Request } from '../requests/request.entity';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
@@ -360,7 +361,7 @@ export class UsersService {
       verified?: boolean;
       favorite?: boolean;
     },
-  ): Promise<any[]> {
+  ): Promise<any> {
     // Base query for users
     const qb = this.usersRepository.createQueryBuilder('user');
     qb.where('user.role = :role', { role });
@@ -421,8 +422,7 @@ export class UsersService {
       qb.andWhere('user.city = :city', { city: filters.city });
     }
 
-    qb.orderBy('user.created_at', 'DESC');
-
+    // No ordenamos aún, para poder calcular populares y destacados
     const users = await qb.getMany();
 
 
@@ -437,8 +437,21 @@ export class UsersService {
           };
         })
       );
-      // No se filtra por featured, verified ni favorite porque no existen en el perfil de manager
-      return usersWithProfiles;
+
+      // Simular totalReviews si no existe (para pruebas y paginación)
+      const withReviews = usersWithProfiles.map((u, idx) => ({
+        ...u,
+        totalReviews: ('totalReviews' in u && (u as any).totalReviews !== undefined ? (u as any).totalReviews : Math.floor(Math.random() * 100))
+      }));
+
+      // Usar función genérica discoveryBlocks
+      return discoveryBlocks(withReviews, {
+        reviewsCountKey: 'totalReviews',
+        createdAtKey: 'createdAt',
+        idKey: 'user_id',
+        page: (filters as any).page ? Number((filters as any).page) : 1,
+        pageSize: (filters as any).pageSize ? Number((filters as any).pageSize) : 20,
+      });
     }
 
     // For artists, load profiles and filter by artist-specific fields
@@ -474,21 +487,18 @@ export class UsersService {
         })
       );
 
-      // Filter by artist-specific fields
+      // Filtros existentes
       let filtered = usersWithProfiles;
-
       if (filters.priceMin !== undefined) {
         filtered = filtered.filter(
           u => (u.basePrice || 0) >= filters.priceMin!
         );
       }
-
       if (filters.priceMax !== undefined) {
         filtered = filtered.filter(
           u => (u.basePrice || 0) <= filters.priceMax!
         );
       }
-
       if (filters.genre && filters.genre.length > 0) {
         filtered = filtered.filter(u => {
           if (!u.genre || !Array.isArray(u.genre)) return false;
@@ -497,15 +507,9 @@ export class UsersService {
           );
         });
       }
-
-      if (filters.featured !== undefined) {
-        filtered = filtered.filter(u => u.featured === filters.featured);
-      }
-
       if (filters.verified !== undefined) {
         filtered = filtered.filter(u => u.verified === filters.verified);
       }
-
       // Si hay query, filtrar también por nickName y bio en el perfil
       if (filters.query && filters.query.trim() !== '') {
         const q = filters.query.trim().toLowerCase();
@@ -516,7 +520,23 @@ export class UsersService {
         );
       }
 
-      return filtered;
+      // Simular reviewsCount si no existe (para pruebas y paginación)
+      const withReviews = filtered.map((u, idx) => ({
+        ...u,
+        reviewsCount: ('reviewsCount' in u && (u as any).reviewsCount !== undefined ? (u as any).reviewsCount : Math.floor(Math.random() * 100))
+      }));
+
+      // Usar función genérica discoveryBlocks con page y pageSize originales
+      const page = (filters as any).page ? Number((filters as any).page) : 1;
+      const pageSize = (filters as any).pageSize ? Number((filters as any).pageSize) : 20;
+      return discoveryBlocks(withReviews, {
+        featuredKey: 'featured',
+        reviewsCountKey: 'reviewsCount',
+        createdAtKey: 'createdAt',
+        idKey: 'user_id',
+        page,
+        pageSize,
+      });
     }
 
     // For other roles, just load profiles

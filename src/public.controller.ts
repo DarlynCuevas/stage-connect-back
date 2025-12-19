@@ -69,7 +69,13 @@ export class PublicController {
       query,
     };
     const artists = await this.usersService.findByRoleWithFilters('Artista', filters);
-    return artists.map((u) => this.mapUser(u)).filter(Boolean);
+    // Mapear cada array del objeto
+    return {
+      populares: Array.isArray(artists.populares) ? artists.populares.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      destacados: Array.isArray(artists.destacados) ? artists.destacados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      resto: Array.isArray(artists.resto) ? artists.resto.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      pagination: artists.pagination || {},
+    };
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -81,6 +87,8 @@ export class PublicController {
     @Query('verified') verified?: string,
     @Query('favorite') favorite?: string,
     @Query('query') query?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     const filters: any = {};
     if (city) filters.city = city;
@@ -88,6 +96,8 @@ export class PublicController {
     if (verified !== undefined) filters.verified = verified === 'true';
     if (favorite !== undefined) filters.favorite = favorite === 'true';
     if (query) filters.query = query;
+    if (page !== undefined) filters.page = Number(page);
+    if (pageSize !== undefined) filters.pageSize = Number(pageSize);
     const managers = await this.usersService.findByRoleWithFilters('Manager', filters);
     // Obtener favoritos del usuario autenticado
     const userId = req.user?.user_id;
@@ -96,10 +106,22 @@ export class PublicController {
       const favorites = await this.usersService.getFavorites(userId);
       favoriteIds = new Set(favorites.map(fav => fav.user_id));
     }
-    return managers.map((u) => ({
-      ...this.mapUser(u),
-      favorite: favoriteIds.has(u.user_id),
-    })).filter(Boolean);
+    // Estructura igual que artistas
+    return {
+      populares: Array.isArray(managers.populares) ? managers.populares.map((u) => ({
+        ...this.mapUser(u),
+        favorite: favoriteIds.has(u.user_id),
+      })).filter(Boolean) : [],
+      destacados: Array.isArray(managers.destacados) ? managers.destacados.map((u) => ({
+        ...this.mapUser(u),
+        favorite: favoriteIds.has(u.user_id),
+      })).filter(Boolean) : [],
+      resto: Array.isArray(managers.resto) ? managers.resto.map((u) => ({
+        ...this.mapUser(u),
+        favorite: favoriteIds.has(u.user_id),
+      })).filter(Boolean) : [],
+      pagination: managers.pagination || {},
+    };
   }
 
     @Get('promoters')
