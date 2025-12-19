@@ -35,7 +35,7 @@ export class ArtistProfile {
   verified?: boolean;
 
   @Column({ name: 'manager_id', type: 'int', nullable: true })
-  managerId?: number;
+  managerId: number | null;
 
   @Column({ type: 'simple-json', nullable: true })
   socialLinks?: { instagram?: string; youtube?: string; spotify?: string; tiktok?: string };

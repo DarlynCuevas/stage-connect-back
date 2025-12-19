@@ -7,7 +7,6 @@ import { ConfigService } from '@nestjs/config';
 type RequestCreatedPayload = {
   id: number;
   artistId: number;
-  managerId?: number;
   requesterId: number;
   eventDate: string;
   eventLocation: string;
@@ -16,6 +15,7 @@ type RequestCreatedPayload = {
   message?: string;
   status: string;
   createdAt?: string;
+  managerId?: number | null;
 };
 
 type RequestUpdatedPayload = {

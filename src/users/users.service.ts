@@ -526,4 +526,13 @@ export class UsersService {
 
     return usersWithProfiles;
   }
+  async findArtistsByManager(managerId: number) {
+    // Busca todos los perfiles de artista cuyo managerId coincida
+    const artistProfiles = await this.artistProfileRepository.find({
+      where: { managerId },
+      relations: ['user'],
+    });
+    // Devuelve los datos de usuario de cada artista
+    return artistProfiles.map(profile => profile.user);
+  }
 }

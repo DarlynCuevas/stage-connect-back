@@ -51,6 +51,18 @@ export class ManagerRequestsService {
       throw new BadRequestException('Solo se pueden enviar solicitudes entre Manager y Artista.');
     }
 
+    // Validar que no exista ya una solicitud pendiente entre estos usuarios
+    const existingRequest1 = await this.managerRequestsRepository.findOne({
+      where: [
+        { sender: { user_id: currentUserId }, receiver: { user_id: receiverId }, status: ManagerRequestStatus.PENDIENTE },
+        { sender: { user_id: receiverId }, receiver: { user_id: currentUserId }, status: ManagerRequestStatus.PENDIENTE }
+      ],
+      relations: ['sender', 'receiver']
+    });
+    if (existingRequest1) {
+      throw new BadRequestException('Ya existe una solicitud pendiente entre estos usuarios.');
+    }
+
     // Si el sender es artista, validar que no tenga manager
     if (sender.role === 'Artista') {
       const senderProfile = await this.artistProfileRepository.findOne({
@@ -59,18 +71,6 @@ export class ManagerRequestsService {
       if (senderProfile?.managerId) {
         throw new BadRequestException('Ya tienes un manager asignado.');
       }
-    }
-
-    // Verificar que no exista una solicitud pendiente entre estos usuarios
-    const existingRequest = await this.managerRequestsRepository.findOne({
-      where: [
-        { sender: { user_id: currentUserId }, receiver: { user_id: receiverId }, status: ManagerRequestStatus.PENDIENTE },
-        { sender: { user_id: receiverId }, receiver: { user_id: currentUserId }, status: ManagerRequestStatus.PENDIENTE },
-      ],
-    });
-
-    if (existingRequest) {
-      throw new BadRequestException('Ya existe una solicitud pendiente entre estos usuarios.');
     }
 
     // Crear y guardar la solicitud
@@ -301,7 +301,7 @@ export class ManagerRequestsService {
     const currentManagerId = artistProfile.managerId;
 
     // Eliminar la relación
-    artistProfile.managerId = undefined;
+    artistProfile.managerId = null;
     await this.artistProfileRepository.save(artistProfile);
 
     if (currentManagerId) {

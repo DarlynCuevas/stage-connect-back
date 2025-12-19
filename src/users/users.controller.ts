@@ -1,3 +1,4 @@
+
 import { Controller, Get, Patch, Body, UseGuards, Request, Delete, Param, ForbiddenException, Query } from '@nestjs/common';
 import { Post } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -91,5 +92,17 @@ export class UsersController {
       message: `¡Bienvenido Manager ${req.user.email}! Acceso total a esta área.`,
       user: req.user,
     };
+  }
+    @Patch('me')
+  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
+    const userId = req.user.user_id;
+    return this.usersService.updateProfile(userId, updateProfileDto);
+  }
+
+  @Roles('Manager')
+  @Get('managed-artists')
+  async getManagedArtists(@Request() req) {
+    const managerId = req.user.user_id;
+    return this.usersService.findArtistsByManager(managerId);
   }
 }
