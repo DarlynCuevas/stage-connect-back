@@ -49,11 +49,12 @@ export class RequestsService {
     // Validar que no exista ya una solicitud pendiente para el mismo artista, requester y fecha
     const existingPending = await this.requestsRepository.findOne({
       where: {
-        artist: artistId,
-        requester: currentUserId,
-        eventDate: eventDate,
+        artist: { user_id: artistId },
+        requester: { user_id: currentUserId },
+        eventDate: parsedEventDate,
         status: RequestStatus.PENDIENTE,
       },
+      relations: ['artist', 'requester'],
     });
     if (existingPending) {
       throw new BadRequestException('Ya existe una solicitud pendiente para este artista y fecha.');
