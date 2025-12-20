@@ -8,9 +8,14 @@ import { RequestsController } from './requests.controller';
 import { RequestsGateway } from './requests.gateway';
 import { AuthModule } from '../auth/auth.module';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
+import { BlockedDaysModule } from '../blocked-days/blocked-days.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Request, User, ArtistProfile, BlockedDay]), AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([Request, User, ArtistProfile, BlockedDay]),
+    AuthModule,
+    BlockedDaysModule,
+  ],
   providers: [RequestsService, RequestsGateway],
   controllers: [RequestsController],
   exports: [RequestsService],

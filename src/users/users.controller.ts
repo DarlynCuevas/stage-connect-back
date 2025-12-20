@@ -1,4 +1,3 @@
-
 import { Controller, Get, Patch, Body, UseGuards, Request, Delete, Param, ForbiddenException, Query } from '@nestjs/common';
 import { Post } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -6,7 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-// ...existing code...
+import { VenueProfile } from './venue-profile.entity';
 
 @Controller('users')
 // Se aplican los guards: 1. Autenticación (JWT), 2. Autorización (Roles)
@@ -72,7 +71,6 @@ export class UsersController {
     let managers = await this.usersService.findByRoleWithFilters('Manager', filters);
     return managers;
   }
-// ...existing code...
 
   @Get('me') // GET /api/users/me (Todos los roles autenticados pueden acceder)
   async getProfile(@Request() req) {
@@ -81,7 +79,15 @@ export class UsersController {
     if (!fullUser) {
       throw new ForbiddenException('Usuario no encontrado');
     }
-    return fullUser;
+    // Si el usuario es Local, incluir venueProfile
+    let venueProfile: VenueProfile | null = null;
+    if (fullUser.role === 'Local' && fullUser.venueProfile) {
+      venueProfile = fullUser.venueProfile;
+    }
+    return {
+      ...fullUser,
+      venueProfile,
+    };
   }
   
   // Endpoint: solo accesible para Managers

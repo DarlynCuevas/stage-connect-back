@@ -36,6 +36,7 @@ export class PublicUsersController {
     @Query('priceMax') priceMax?: string,
     @Query('featured') featured?: string,
     @Query('verified') verified?: string,
+    @Query('date') date?: string,
   ) {
     if (!role) {
       return [];
@@ -52,6 +53,7 @@ export class PublicUsersController {
     if (city) filters.city = city;
     if (priceMin) filters.priceMin = parseFloat(priceMin);
     if (priceMax) filters.priceMax = parseFloat(priceMax);
+    if (date) filters.date = date;
 
     if (featured !== undefined) filters.featured = featured === 'true';
     if (verified !== undefined) filters.verified = verified === 'true';

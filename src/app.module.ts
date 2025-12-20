@@ -12,6 +12,9 @@ import { BlockedDaysModule } from './blocked-days/blocked-days.module';
 import { ManagerRequestsModule } from './manager-requests/manager-requests.module';
 import { PublicController } from './public.controller';
 import { ReviewsModule } from './reviews/reviews.module';
+import { NotificationsController } from './notifications.controller';
+import { NotificationsService } from './notifications.service';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Module({
   imports: [
@@ -57,7 +60,7 @@ import { ReviewsModule } from './reviews/reviews.module';
     JwtModule,
     ReviewsModule,
   ],
-  controllers: [PublicController],
-  providers: [],
+  controllers: [PublicController, NotificationsController],
+  providers: [NotificationsService, NotificationsGateway],
 })
 export class AppModule {}

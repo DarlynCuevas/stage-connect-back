@@ -8,6 +8,7 @@ import { User } from '../users/user.entity';
 import { ArtistProfile } from '../users/artist-profile.entity';
 import { RequestsGateway } from './requests.gateway';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
+import { BlockedDaysService } from '../blocked-days/blocked-days.service';
 
 @Injectable()
 export class RequestsService {
@@ -21,6 +22,7 @@ export class RequestsService {
     @InjectRepository(BlockedDay)
     private readonly blockedDayRepository: Repository<BlockedDay>,
     private readonly requestsGateway: RequestsGateway,
+    private readonly blockedDaysService: BlockedDaysService,
   ) {}
 
   /**
@@ -48,6 +50,7 @@ export class RequestsService {
     const { artistId, eventDate, eventLocation, eventType, offeredPrice, message } = createRequestDto;
 
     const parsedEventDate = new Date(eventDate);
+    console.log('[CREATE SOLICITUD] eventDate recibido:', eventDate, '-> parsed:', parsedEventDate);
     if (isNaN(parsedEventDate.getTime())) {
       throw new BadRequestException('Fecha de evento inválida.');
     }
@@ -227,6 +230,13 @@ export class RequestsService {
       } else if (isManager) {
         request.closed_by = ClosedBy.MANAGER;
       }
+      // Log para verificar la fecha antes de crear el día bloqueado
+      console.log('[PATCH SOLICITUD] Crear día bloqueado:', {
+        artistId: request.artist.user_id,
+        eventDate: request.eventDate,
+        eventDateType: typeof request.eventDate,
+      });
+      await this.blockedDaysService.create(request.artist.user_id, request.eventDate);
     }
     const saved = await this.requestsRepository.save(request);
 

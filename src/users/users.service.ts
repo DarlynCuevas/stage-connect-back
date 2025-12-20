@@ -115,20 +115,15 @@ export class UsersService {
 
   // Obtener usuario por id con su perfil correspondiente
   async findById(id: number): Promise<User | null> {
-    console.log('🔍 [UsersService.findById] Searching for user with ID:', id);
-    
     const user = await this.usersRepository.findOne({ where: { user_id: id } });
     
     if (!user) {
-      console.log('❌ [UsersService.findById] User not found with ID:', id);
       return null;
     }
 
-    console.log('✅ [UsersService.findById] User found:', { id: user.user_id, role: user.role, name: user.name });
 
     // Load corresponding profile based on role
     const userWithProfile = await this.loadUserProfile(user);
-    console.log('📊 [UsersService.findById] User with profile loaded:', !!userWithProfile);
     return userWithProfile;
   }
 
@@ -155,16 +150,13 @@ export class UsersService {
           where: { user_id: user.user_id },
         });
         if (profile) {
-          console.log('✅ [loadUserProfile] Manager profile found for user:', user.user_id);
           return { ...user, ...profile };
         }
         // Si no existe el perfil, crearlo automáticamente
-        console.log('⚠️ [loadUserProfile] Manager profile not found, creating new one for user:', user.user_id);
         const newManagerProfile = this.managerProfileRepository.create({
           user_id: user.user_id,
         });
         const savedManagerProfile = await this.managerProfileRepository.save(newManagerProfile);
-        console.log('✅ [loadUserProfile] Manager profile created for user:', user.user_id);
         return { ...user, ...savedManagerProfile };
       case 'Local':
         profile = await this.venueProfileRepository.findOne({
@@ -199,15 +191,12 @@ export class UsersService {
 
   // Actualizar perfil de usuario
   async updateProfile(userId: number, updateData: Partial<User>): Promise<any> {
-    console.log('📝 [updateProfile] UserId:', userId);
-    console.log('📝 [updateProfile] UpdateData:', JSON.stringify(updateData, null, 2));
     
     const user = await this.usersRepository.findOne({ where: { user_id: userId } });
     if (!user) {
       throw new Error('Usuario no encontrado');
     }
     
-    console.log('👤 [updateProfile] User found:', user.user_id, user.role);
     
     // Separate common fields from role-specific fields
     const commonFields = ['name', 'bio', 'country', 'city', 'avatar', 'banner', 'gender'];
@@ -223,94 +212,74 @@ export class UsersService {
       }
     });
 
-    console.log('🔵 [updateProfile] User updates:', userUpdates);
-    console.log('🟢 [updateProfile] Profile updates:', profileUpdates);
 
     // Update user table
     if (Object.keys(userUpdates).length > 0) {
       Object.assign(user, userUpdates);
       await this.usersRepository.save(user);
-      console.log('✅ [updateProfile] User table updated');
     }
 
     // Update corresponding profile
     if (Object.keys(profileUpdates).length > 0) {
-      console.log('🔄 [updateProfile] Updating profile for role:', user.role);
       switch (user.role) {
         case 'Artista':
           const artistProfile = await this.artistProfileRepository.findOne({
             where: { user_id: userId },
           });
-          console.log('🎨 [updateProfile] Artist profile found:', artistProfile ? 'YES' : 'NO');
           if (artistProfile) {
             Object.assign(artistProfile, profileUpdates);
             await this.artistProfileRepository.save(artistProfile);
-            console.log('✅ [updateProfile] Artist profile updated');
           } else {
-            console.log('⚠️ [updateProfile] Artist profile NOT FOUND, creating...');
             const newProfile = this.artistProfileRepository.create({
               user_id: userId,
               ...profileUpdates,
             });
             await this.artistProfileRepository.save(newProfile);
-            console.log('✅ [updateProfile] Artist profile created');
           }
           break;
         case 'Manager':
           const managerProfile = await this.managerProfileRepository.findOne({
             where: { user_id: userId },
           });
-          console.log('💼 [updateProfile] Manager profile found:', managerProfile ? 'YES' : 'NO');
           if (managerProfile) {
             Object.assign(managerProfile, profileUpdates);
             await this.managerProfileRepository.save(managerProfile);
-            console.log('✅ [updateProfile] Manager profile updated');
           } else {
-            console.log('⚠️ [updateProfile] Manager profile NOT FOUND, creating...');
             const newProfile = this.managerProfileRepository.create({
               user_id: userId,
               ...profileUpdates,
             });
             await this.managerProfileRepository.save(newProfile);
-            console.log('✅ [updateProfile] Manager profile created');
           }
           break;
         case 'Local':
           const venueProfile = await this.venueProfileRepository.findOne({
             where: { user_id: userId },
           });
-          console.log('🏢 [updateProfile] Venue profile found:', venueProfile ? 'YES' : 'NO');
           if (venueProfile) {
             Object.assign(venueProfile, profileUpdates);
             await this.venueProfileRepository.save(venueProfile);
-            console.log('✅ [updateProfile] Venue profile updated');
           } else {
-            console.log('⚠️ [updateProfile] Venue profile NOT FOUND, creating...');
             const newProfile = this.venueProfileRepository.create({
               user_id: userId,
               ...profileUpdates,
             });
             await this.venueProfileRepository.save(newProfile);
-            console.log('✅ [updateProfile] Venue profile created');
           }
           break;
         case 'Promotor':
           const promoterProfile = await this.promoterProfileRepository.findOne({
             where: { user_id: userId },
           });
-          console.log('📢 [updateProfile] Promoter profile found:', promoterProfile ? 'YES' : 'NO');
           if (promoterProfile) {
             Object.assign(promoterProfile, profileUpdates);
             await this.promoterProfileRepository.save(promoterProfile);
-            console.log('✅ [updateProfile] Promoter profile updated');
           } else {
-            console.log('⚠️ [updateProfile] Promoter profile NOT FOUND, creating...');
             const newProfile = this.promoterProfileRepository.create({
               user_id: userId,
               ...profileUpdates,
             });
             await this.promoterProfileRepository.save(newProfile);
-            console.log('✅ [updateProfile] Promoter profile created');
           }
           break;
       }
@@ -318,7 +287,6 @@ export class UsersService {
 
     // Return updated user with profile
     const result = await this.findById(userId);
-    console.log('🎯 [updateProfile] Final result:', result ? 'SUCCESS' : 'FAILED');
     return result;
   }
 

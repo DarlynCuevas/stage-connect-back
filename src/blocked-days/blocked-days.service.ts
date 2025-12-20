@@ -17,6 +17,7 @@ export class BlockedDaysService {
    * Crear un día bloqueado para un artista
    */
   async create(artistId: number, blockedDate: Date): Promise<BlockedDay> {
+
     // Validar que el artista existe
     const artist = await this.usersRepository.findOne({
       where: { user_id: artistId },
