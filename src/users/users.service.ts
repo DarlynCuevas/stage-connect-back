@@ -418,7 +418,7 @@ export class UsersService {
       qb.andWhere('user.country = :country', { country: filters.country });
     }
 
-    if (filters.city) {
+    if (filters.city && filters.city !== 'undefined' && filters.city !== '') {
       qb.andWhere('user.city = :city', { city: filters.city });
     }
 
@@ -428,7 +428,7 @@ export class UsersService {
 
     // Para managers, cargar perfil y filtrar por featured, verified y favorite si corresponde
     if (role === 'Manager') {
-      const usersWithProfiles = await Promise.all(
+      let usersWithProfiles = await Promise.all(
         users.map(async (user) => {
           const profile = await this.managerProfileRepository.findOne({ where: { user_id: user.user_id } });
           return {
@@ -437,6 +437,11 @@ export class UsersService {
           };
         })
       );
+
+      // Filtrar por featured si se solicita
+      if (filters.featured !== undefined) {
+        usersWithProfiles = usersWithProfiles.filter((u) => u.featured === filters.featured);
+      }
 
       // Simular totalReviews si no existe (para pruebas y paginación)
       const withReviews = usersWithProfiles.map((u, idx) => ({
