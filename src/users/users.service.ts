@@ -360,8 +360,10 @@ export class UsersService {
       featured?: boolean;
       verified?: boolean;
       favorite?: boolean;
+      date?: string;
     },
   ): Promise<any> {
+    // ...existing code...
     // Base query for users
     const qb = this.usersRepository.createQueryBuilder('user');
     qb.where('user.role = :role', { role });
@@ -494,6 +496,14 @@ export class UsersService {
 
       // Filtros existentes
       let filtered = usersWithProfiles;
+      // Log para depuración: ver valor recibido y fechas bloqueadas
+      if (filters.date) {
+        const dateStr = filters.date;
+        filtered = filtered.filter(u => {
+          const tieneBloqueado = u.blockedDays && u.blockedDays.includes(dateStr);
+          return !tieneBloqueado;
+        });
+      }
       if (filters.priceMin !== undefined) {
         filtered = filtered.filter(
           u => (u.basePrice || 0) >= filters.priceMin!

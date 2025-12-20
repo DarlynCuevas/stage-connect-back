@@ -54,6 +54,7 @@ export class PublicController {
     @Query('priceMin') priceMin?: string,
     @Query('priceMax') priceMax?: string,
     @Query('query') query?: string,
+    @Query('date') date?: string,
   ) {
     // Normalizar géneros
     let genreArr: string[] = [];
@@ -67,6 +68,7 @@ export class PublicController {
       priceMin: priceMin ? Number(priceMin) : undefined,
       priceMax: priceMax ? Number(priceMax) : undefined,
       query,
+      date,
     };
     const artists = await this.usersService.findByRoleWithFilters('Artista', filters);
     // Mapear cada array del objeto
