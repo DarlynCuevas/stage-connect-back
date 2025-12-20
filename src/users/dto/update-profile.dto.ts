@@ -1,6 +1,12 @@
+
 import { IsOptional, IsString, IsNumber, IsBoolean, IsArray, Min, Max } from 'class-validator';
 
 export class UpdateProfileDto {
+
+    // Manager destacado
+    @IsOptional()
+    @IsBoolean()
+    featured?: boolean;
   @IsOptional()
   @IsString()
   name?: string;

@@ -440,7 +440,7 @@ export class UsersService {
 
       // Filtrar por featured si se solicita
       if (filters.featured !== undefined) {
-        usersWithProfiles = usersWithProfiles.filter((u) => u.featured === filters.featured);
+        usersWithProfiles = usersWithProfiles.filter((u) => u.featured !== undefined && u.featured === filters.featured);
       }
 
       // Simular totalReviews si no existe (para pruebas y paginación)

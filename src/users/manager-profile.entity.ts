@@ -70,6 +70,9 @@ export class ManagerProfile {
   @Column({ name: 'accepting_artists', type: 'boolean', default: true })
   acceptingArtists?: boolean; // Si está buscando nuevos artistas
 
+  @Column({ name: 'featured', type: 'boolean', default: false })
+  featured?: boolean; // Si es un manager destacado
+
   @Column({ name: 'response_time', type: 'varchar', length: 50, nullable: true })
   responseTime?: string; // "Responde en menos de 24h"
 }
