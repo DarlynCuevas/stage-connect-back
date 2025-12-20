@@ -14,7 +14,7 @@ export class NotificationsService {
    * venueId: id del local
    * date: fecha disponible (YYYY-MM-DD)
    */
-  async notifyAvailableDate(venueId: string, date: string) {
+  async notifyAvailableDate(venueId: string, date: string, price?: number) {
     // 1. Buscar artistas disponibles ese día
     const availableArtists = await this.usersService.findByRoleWithFilters('Artista', { date });
     // Unir todos los bloques de discoveryBlocks en un solo array
@@ -56,6 +56,7 @@ export class NotificationsService {
       venueName,
       venueCity,
       date,
+      price,
       artistIds,
       managerIds: managerIdsToSend,
     });
@@ -81,6 +82,7 @@ export class NotificationsService {
     venueName?: string;
     venueCity?: string;
     date: string;
+    price?: number;
     artistIds: number[];
     managerIds: number[];
   }) {

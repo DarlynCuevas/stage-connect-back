@@ -1,0 +1,46 @@
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
+import { VenueProfile } from './users/venue-profile.entity';
+import { User } from './users/user.entity';
+import { ArtistProfile } from './users/artist-profile.entity';
+
+
+export type InterestedStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
+
+@Entity()
+export class Interested {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+
+  @Column()
+  venueId: number;
+  @ManyToOne(() => VenueProfile, { nullable: false })
+  @JoinColumn({ name: 'venueId' })
+  venue: VenueProfile;
+
+
+  @Column({ nullable: true })
+  managerId: number | null;
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'managerId' })
+  manager: User | null;
+
+
+  @Column()
+  artistId: number;
+  @ManyToOne(() => ArtistProfile, { nullable: false })
+  @JoinColumn({ name: 'artistId' })
+  artist: ArtistProfile;
+
+  @Column({ type: 'date' })
+  date: string;
+
+  @Column({ type: 'decimal', nullable: true })
+  price: number | null;
+
+  @Column({ type: 'varchar', default: 'pending' })
+  status: InterestedStatus;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}

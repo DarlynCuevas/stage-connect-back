@@ -15,6 +15,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
+import { InterestedModule } from './interested.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { NotificationsGateway } from './notifications.gateway';
     ManagerRequestsModule,
     JwtModule,
     ReviewsModule,
+    InterestedModule,
   ],
   controllers: [PublicController, NotificationsController],
   providers: [NotificationsService, NotificationsGateway],

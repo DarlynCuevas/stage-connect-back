@@ -22,11 +22,12 @@ export class NotificationsGateway {
     venueName?: string;
     venueCity?: string;
     date: string;
+    price?: number;
     artistIds: number[];
     managerIds: number[];
   }) {
-    const { venueId, venueName, venueCity, date, artistIds, managerIds } = payload;
-    const notification = { venueId, venueName, venueCity, date, type: 'available-date' };
+    const { venueId, venueName, venueCity, date, price, artistIds, managerIds } = payload;
+    const notification = { venueId, venueName, venueCity, date, price, type: 'available-date' };
     artistIds.forEach((id) => {
       this.server.to(`user:${id}`).emit('notification.available-date', notification);
     });
