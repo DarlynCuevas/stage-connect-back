@@ -331,13 +331,17 @@ export class UsersService {
       date?: string;
     },
   ): Promise<any> {
-    // ...existing code...
     // Base query for users
     const qb = this.usersRepository.createQueryBuilder('user');
     qb.where('user.role = :role', { role });
 
+    // Si es artista, hacer LEFT JOIN a artist_profile para poder filtrar por nickName
+    if (role === 'Artista') {
+      qb.leftJoin('artist_profiles', 'profile', 'profile.user_id = user.user_id');
+    }
+
     if (filters.query) {
-      // Buscar por cada palabra del query (AND lógico, todos los parámetros aplicados correctamente)
+      // Buscar por coincidencia parcial en cualquier parte del nombre o nickname
       const words = filters.query
         .toLowerCase()
         .normalize('NFD')
@@ -348,13 +352,13 @@ export class UsersService {
       if (words.length > 0) {
         const params: Record<string, string> = {};
         if (words.length === 1) {
-          // Solo una palabra o fragmento: buscar tal cual
           params['q'] = `%${words[0]}%`;
           if (role === 'Local') {
             qb.andWhere(`(unaccent(LOWER(user.name)) ILIKE unaccent(:q) OR unaccent(LOWER(user.email)) ILIKE unaccent(:q))`, params);
           } else if (role === 'Artista') {
             qb.andWhere(`(
               unaccent(LOWER(user.name)) ILIKE unaccent(:q)
+              OR unaccent(LOWER(profile.nick_name)) ILIKE unaccent(:q)
               OR unaccent(LOWER(user.email)) ILIKE unaccent(:q)
               OR unaccent(LOWER(user.city)) ILIKE unaccent(:q)
             )`, params);
@@ -362,7 +366,6 @@ export class UsersService {
             qb.andWhere(`(unaccent(LOWER(user.name)) ILIKE unaccent(:q) OR unaccent(LOWER(user.email)) ILIKE unaccent(:q))`, params);
           }
         } else {
-          // Varias palabras: buscar cada una como OR
           const orConditions: string[] = [];
           words.forEach((word, idx) => {
             const param = `q${idx}`;
@@ -372,6 +375,7 @@ export class UsersService {
             } else if (role === 'Artista') {
               orConditions.push(`(
                 unaccent(LOWER(user.name)) ILIKE unaccent(:${param})
+                OR unaccent(LOWER(profile.nick_name)) ILIKE unaccent(:${param})
                 OR unaccent(LOWER(user.email)) ILIKE unaccent(:${param})
                 OR unaccent(LOWER(user.city)) ILIKE unaccent(:${param})
               )`);

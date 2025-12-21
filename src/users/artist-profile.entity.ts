@@ -25,6 +25,9 @@ export class ArtistProfile {
   @Column({ name: 'base_price', type: 'decimal', precision: 10, scale: 2, nullable: true })
   basePrice?: number;
 
+  @Column({ name: 'allow_negotiation', type: 'boolean', default: false })
+  allowNegotiation?: boolean;
+
   @Column({ type: 'float', default: 0, nullable: true })
   rating?: number;
 
