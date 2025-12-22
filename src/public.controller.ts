@@ -71,11 +71,13 @@ export class PublicController {
       date,
     };
     const artists = await this.usersService.findByRoleWithFilters('Artista', filters);
-    // Mapear cada array del objeto
+    // Mapear cada array del objeto, incluyendo recienLlegados
     return {
       populares: Array.isArray(artists.populares) ? artists.populares.map((u) => this.mapUser(u)).filter(Boolean) : [],
       destacados: Array.isArray(artists.destacados) ? artists.destacados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      recienLlegados: Array.isArray(artists.recienLlegados) ? artists.recienLlegados.map((u) => this.mapUser(u)).filter(Boolean) : [],
       enCiudad: Array.isArray(artists.enCiudad) ? artists.enCiudad.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      masContratados: Array.isArray(artists.masContratados) ? artists.masContratados.map((u) => this.mapUser(u)).filter(Boolean) : [],
       resto: Array.isArray(artists.resto) ? artists.resto.map((u) => this.mapUser(u)).filter(Boolean) : [],
       pagination: artists.pagination || {},
     };

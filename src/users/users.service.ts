@@ -435,6 +435,7 @@ export class UsersService {
 
     // For artists, load profiles and filter by artist-specific fields
     if (role === 'Artista') {
+
       // Obtener todos los user_id de los artistas
       const artistIds = users.map(u => u.user_id);
       // Traer todos los días bloqueados de todos los artistas en una sola consulta
@@ -457,12 +458,35 @@ export class UsersService {
         blockedDaysMap[id].push(dateStr);
       });
 
+      // Calcular bookings aceptados por artista
+        console.log('[DEBUG] artistIds para masContratados:', artistIds);
+      const bookingsPorArtistaRaw = await this.requestsRepository
+        .createQueryBuilder('request')
+        .select('request.artist_id', 'artistId')
+        .addSelect('COUNT(*)', 'total')
+        .where('request.status = :status', { status: 'Accepted' })
+        .andWhere('request.artist_id IN (:...artistIds)', { artistIds })
+        .groupBy('request.artist_id')
+        .getRawMany();
+        console.log('[DEBUG] bookingsPorArtistaRaw:', bookingsPorArtistaRaw);
+
+      const bookingsPorArtista: Record<number, number> = {};
+      bookingsPorArtistaRaw.forEach(row => {
+        bookingsPorArtista[Number(row.artistId)] = Number(row.total);
+      });
+
       const usersWithProfiles = await Promise.all(
         users.map(async (user) => {
           const profile = await this.artistProfileRepository.findOne({
             where: { user_id: user.user_id },
           });
-          return { ...user, ...profile, managerId: profile?.managerId, blockedDays: blockedDaysMap[user.user_id] || [] };
+          return {
+            ...user,
+            ...profile,
+            managerId: profile?.managerId,
+            blockedDays: blockedDaysMap[user.user_id] || [],
+            totalBookings: bookingsPorArtista[user.user_id] || 0,
+          };
         })
       );
 
@@ -514,6 +538,13 @@ export class UsersService {
       }));
 
       // Usar función genérica discoveryBlocks con page y pageSize originales
+            // Calcular fecha límite para 'recién llegados' (últimos 30 días)
+            const fechaLimite = new Date();
+            fechaLimite.setDate(fechaLimite.getDate() - 30);
+            const recienLlegados = withReviews.filter(a => {
+              if (!a.createdAt) return false;
+              return new Date(a.createdAt) >= fechaLimite;
+            });
       const page = (filters as any).page ? Number((filters as any).page) : 1;
       const pageSize = (filters as any).pageSize ? Number((filters as any).pageSize) : 20;
       const discovery = discoveryBlocks(withReviews, {
@@ -542,8 +573,12 @@ export class UsersService {
       return {
         populares: discovery.populares,
         destacados: discovery.destacados,
+        recienLlegados,
         enCiudad,
         resto: discovery.resto,
+        masContratados: [...withReviews]
+          .sort((a, b) => (b.totalBookings || 0) - (a.totalBookings || 0))
+          .slice(0, 10),
         pagination: discovery.pagination,
       };
     }
