@@ -3,6 +3,8 @@ import { User } from './user.entity';
 
 @Entity('manager_profiles')
 export class ManagerProfile {
+    @Column({ name: 'verified', type: 'boolean', default: false })
+    verified?: boolean; // Si el manager está verificado
   @PrimaryColumn({ name: 'user_id' })
   user_id: number;
 

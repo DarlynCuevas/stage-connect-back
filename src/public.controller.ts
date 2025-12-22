@@ -1,4 +1,6 @@
 
+
+
  
 import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -6,11 +8,55 @@ import { UsersService } from './users/users.service';
 
 @Controller('public')
 export class PublicController {
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('artists/discover')
+  async discoverArtists(@Request() req) {
+    // Sin filtros: descubrimiento puro
+    const artists = await this.usersService.findByRoleWithFilters('Artista', {});
+    let userCity: string | undefined = undefined;
+    // Si hay usuario autenticado (token válido), usar su ciudad
+    if (req.user && req.user.user_id) {
+      const user = await this.usersService.findById(req.user.user_id);
+      userCity = user?.city;
+    }
+    // Filtrar enCiudad solo si hay ciudad de usuario
+    let enCiudadArr: any[] = [];
+    if (userCity) {
+      enCiudadArr = [...(artists.populares || []), ...(artists.destacados || []), ...(artists.recienLlegados || []), ...(artists.masContratados || []), ...(artists.resto || [])]
+        .filter((u) => typeof u.city === 'string' && typeof userCity === 'string' && u.city.toLowerCase() === userCity.toLowerCase())
+        .map((u) => this.mapUser(u)).filter(Boolean);
+    }
+    return {
+      populares: Array.isArray(artists.populares) ? artists.populares.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      destacados: Array.isArray(artists.destacados) ? artists.destacados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      recienLlegados: Array.isArray(artists.recienLlegados) ? artists.recienLlegados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      enCiudad: enCiudadArr,
+      masContratados: Array.isArray(artists.masContratados) ? artists.masContratados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      resto: Array.isArray(artists.resto) ? artists.resto.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      pagination: artists.pagination || {},
+    };
+  }
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('managers/discover')
+  async discoverManagers() {
+    // Sin filtros: descubrimiento puro
+    const managers = await this.usersService.findByRoleWithFilters('Manager', {});
+    return {
+      populares: Array.isArray(managers.populares) ? managers.populares.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      destacados: Array.isArray(managers.destacados) ? managers.destacados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      verificados: Array.isArray(managers.verificados) ? managers.verificados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      masContratados: Array.isArray(managers.masContratados) ? managers.masContratados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      resto: Array.isArray(managers.resto) ? managers.resto.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      pagination: managers.pagination || {},
+    };
+  }
 
   private mapUser(user: any) {
     if (!user) return null;
-    const { user_id, ...rest } = user;
+    const { user_id, email, passwordHash, password_hash, ...rest } = user;
+    // No exponer email ni passwordHash ni password_hash
     return { id: user_id, ...rest };
   }
 
@@ -112,6 +158,11 @@ export class PublicController {
       favoriteIds = new Set(favorites.map(fav => fav.user_id));
     }
     // Estructura igual que artistas
+    // Nuevo: managers verificados (todos los verificados, sin paginación ni filtros)
+    const allVerificados = await this.usersService.findByRoleWithFilters('Manager', { verified: true, page: 1, pageSize: 1000 });
+    const verificados = Array.isArray(allVerificados.populares)
+      ? [...allVerificados.populares, ...(allVerificados.destacados || []), ...(allVerificados.resto || [])]
+      : [];
     return {
       populares: Array.isArray(managers.populares) ? managers.populares.map((u) => ({
         ...this.mapUser(u),
@@ -121,6 +172,10 @@ export class PublicController {
         ...this.mapUser(u),
         favorite: favoriteIds.has(u.user_id),
       })).filter(Boolean) : [],
+      verificados: verificados.map((u) => ({
+        ...this.mapUser(u),
+        favorite: favoriteIds.has(u.user_id),
+      })),
       resto: Array.isArray(managers.resto) ? managers.resto.map((u) => ({
         ...this.mapUser(u),
         favorite: favoriteIds.has(u.user_id),

@@ -329,6 +329,8 @@ export class UsersService {
       verified?: boolean;
       favorite?: boolean;
       date?: string;
+      page?: number;
+      pageSize?: number;
     },
   ): Promise<any> {
     // Base query for users

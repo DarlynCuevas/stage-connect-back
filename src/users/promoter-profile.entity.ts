@@ -3,6 +3,8 @@ import { User } from './user.entity';
 
 @Entity('promoter_profiles')
 export class PromoterProfile {
+    @Column({ name: 'verified', type: 'boolean', default: false })
+    verified?: boolean; // Si el promotor está verificado
   @PrimaryColumn({ name: 'user_id' })
   user_id: number;
 
