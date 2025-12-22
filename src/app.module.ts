@@ -12,6 +12,7 @@ import { BlockedDaysModule } from './blocked-days/blocked-days.module';
 import { ManagerRequestsModule } from './manager-requests/manager-requests.module';
 import { PublicController } from './public.controller';
 import { ReviewsModule } from './reviews/reviews.module';
+import { VenueDashboardModule } from './venue-dashboard/venue-dashboard.module';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
@@ -61,6 +62,7 @@ import { InterestedModule } from './interested.module';
     JwtModule,
     ReviewsModule,
     InterestedModule,
+    VenueDashboardModule,
   ],
   controllers: [PublicController, NotificationsController],
   providers: [NotificationsService, NotificationsGateway],
