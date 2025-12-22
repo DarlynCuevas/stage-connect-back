@@ -75,6 +75,7 @@ export class PublicController {
     return {
       populares: Array.isArray(artists.populares) ? artists.populares.map((u) => this.mapUser(u)).filter(Boolean) : [],
       destacados: Array.isArray(artists.destacados) ? artists.destacados.map((u) => this.mapUser(u)).filter(Boolean) : [],
+      enCiudad: Array.isArray(artists.enCiudad) ? artists.enCiudad.map((u) => this.mapUser(u)).filter(Boolean) : [],
       resto: Array.isArray(artists.resto) ? artists.resto.map((u) => this.mapUser(u)).filter(Boolean) : [],
       pagination: artists.pagination || {},
     };

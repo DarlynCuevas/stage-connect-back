@@ -516,7 +516,7 @@ export class UsersService {
       // Usar función genérica discoveryBlocks con page y pageSize originales
       const page = (filters as any).page ? Number((filters as any).page) : 1;
       const pageSize = (filters as any).pageSize ? Number((filters as any).pageSize) : 20;
-      return discoveryBlocks(withReviews, {
+      const discovery = discoveryBlocks(withReviews, {
         featuredKey: 'featured',
         reviewsCountKey: 'reviewsCount',
         createdAtKey: 'createdAt',
@@ -524,6 +524,28 @@ export class UsersService {
         page,
         pageSize,
       });
+
+      // Obtener la ciudad del usuario desde los filtros
+      const ciudadUsuario = filters.city ? filters.city.toLowerCase() : null;
+      // Unir todos los artistas de la respuesta (populares, destacados, resto)
+      let enCiudad: typeof withReviews = [];
+      if (ciudadUsuario) {
+        const idsYaMostrados = new Set([
+          ...discovery.populares.map(a => a.user_id),
+          ...discovery.destacados.map(a => a.user_id)
+        ]);
+        enCiudad = withReviews.filter(
+          a => a.city && a.city.toLowerCase() === ciudadUsuario && !idsYaMostrados.has(a.user_id)
+        );
+      }
+
+      return {
+        populares: discovery.populares,
+        destacados: discovery.destacados,
+        enCiudad,
+        resto: discovery.resto,
+        pagination: discovery.pagination,
+      };
     }
 
     // For other roles, just load profiles
