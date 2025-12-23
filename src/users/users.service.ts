@@ -1,6 +1,13 @@
+// Sanitiza el usuario para no exponer campos sensibles
+function sanitizeUserResponse(user: any) {
+  if (!user) return user;
+  const { passwordHash, password_hash, ...rest } = user;
+  return rest;
+}
 // Archivo: src/users/users.service.ts
 
 import { Injectable } from '@nestjs/common';
+import cloudinary, { getCloudinaryPublicId } from '../lib/cloudinary';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Between } from 'typeorm';
 import { User, UserRole } from './user.entity';
@@ -132,58 +139,43 @@ export class UsersService {
     let profile: any = null;
 
     switch (user.role) {
-      case 'Artista':
+      case 'Artista': {
         profile = await this.artistProfileRepository.findOne({
           where: { user_id: user.user_id },
         });
-        if (profile) {
-          return { ...user, ...profile, managerId: profile.managerId };
-        }
-        // Si no existe el perfil, crearlo automáticamente
-        const newArtistProfile = this.artistProfileRepository.create({
-          user_id: user.user_id,
-        });
-        const savedArtistProfile = await this.artistProfileRepository.save(newArtistProfile);
-        return { ...user, ...savedArtistProfile, managerId: savedArtistProfile.managerId };
-      case 'Manager':
+        let merged = profile ? { ...user, ...profile, managerId: profile.managerId } : { ...user };
+        // Forzar avatar y banner del user base
+        merged.avatar = user.avatar;
+        merged.banner = user.banner;
+        return merged;
+      }
+      case 'Manager': {
         profile = await this.managerProfileRepository.findOne({
           where: { user_id: user.user_id },
         });
-        if (profile) {
-          return { ...user, ...profile };
-        }
-        // Si no existe el perfil, crearlo automáticamente
-        const newManagerProfile = this.managerProfileRepository.create({
-          user_id: user.user_id,
-        });
-        const savedManagerProfile = await this.managerProfileRepository.save(newManagerProfile);
-        return { ...user, ...savedManagerProfile };
-      case 'Local':
+        let merged = profile ? { ...user, ...profile } : { ...user };
+        merged.avatar = user.avatar;
+        merged.banner = user.banner;
+        return merged;
+      }
+      case 'Local': {
         profile = await this.venueProfileRepository.findOne({
           where: { user_id: user.user_id },
         });
-        if (profile) {
-          return { ...user, ...profile };
-        }
-        // Si no existe el perfil, crearlo automáticamente
-        const newVenueProfile = this.venueProfileRepository.create({
-          user_id: user.user_id,
-        });
-        const savedVenueProfile = await this.venueProfileRepository.save(newVenueProfile);
-        return { ...user, ...savedVenueProfile };
-      case 'Promotor':
+        let merged = profile ? { ...user, ...profile } : { ...user };
+        merged.avatar = user.avatar;
+        merged.banner = user.banner;
+        return merged;
+      }
+      case 'Promotor': {
         profile = await this.promoterProfileRepository.findOne({
           where: { user_id: user.user_id },
         });
-        if (profile) {
-          return { ...user, ...profile };
-        }
-        // Si no existe el perfil, crearlo automáticamente
-        const newPromoterProfile = this.promoterProfileRepository.create({
-          user_id: user.user_id,
-        });
-        const savedPromoterProfile = await this.promoterProfileRepository.save(newPromoterProfile);
-        return { ...user, ...savedPromoterProfile };
+        let merged = profile ? { ...user, ...profile } : { ...user };
+        merged.avatar = user.avatar;
+        merged.banner = user.banner;
+        return merged;
+      }
       default:
         return user;
     }
@@ -191,19 +183,17 @@ export class UsersService {
 
   // Actualizar perfil de usuario
   async updateProfile(userId: number, updateData: Partial<User>): Promise<any> {
-    
     const user = await this.usersRepository.findOne({ where: { user_id: userId } });
     if (!user) {
       throw new Error('Usuario no encontrado');
     }
-    
-    
-    // Separate common fields from role-specific fields
+
+    // Campos comunes (banner y avatar en users)
     const commonFields = ['name', 'bio', 'country', 'city', 'avatar', 'banner', 'gender'];
     const userUpdates: any = {};
     const profileUpdates: any = {};
 
-    // Separate updates
+    // Separar updates
     Object.keys(updateData).forEach(key => {
       if (commonFields.includes(key)) {
         userUpdates[key] = updateData[key];
@@ -212,8 +202,21 @@ export class UsersService {
       }
     });
 
+    // Borrar imagen anterior si cambia avatar o banner
+    for (const field of ['avatar', 'banner']) {
+      if (userUpdates[field] && user[field] && userUpdates[field] !== user[field]) {
+        const publicId = getCloudinaryPublicId(user[field]);
+        if (publicId) {
+          try {
+            await cloudinary.uploader.destroy(publicId);
+          } catch (err) {
+            console.error(`Error borrando ${field} anterior de Cloudinary:`, err);
+          }
+        }
+      }
+    }
 
-    // Update user table
+    // Actualizar user
     if (Object.keys(userUpdates).length > 0) {
       Object.assign(user, userUpdates);
       await this.usersRepository.save(user);
@@ -285,9 +288,9 @@ export class UsersService {
       }
     }
 
-    // Return updated user with profile
+    // Return updated user with profile, sanitized
     const result = await this.findById(userId);
-    return result;
+    return sanitizeUserResponse(result);
   }
 
   // Eliminar usuario por id (propio) - CASCADE eliminará el perfil automáticamente

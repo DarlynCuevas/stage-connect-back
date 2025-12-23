@@ -1,12 +1,14 @@
 
+
 import { IsOptional, IsString, IsNumber, IsBoolean, IsArray, Min, Max } from 'class-validator';
 
 export class UpdateProfileDto {
 
-    // Manager destacado
-    @IsOptional()
-    @IsBoolean()
-    featured?: boolean;
+  // Manager destacado
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
   @IsOptional()
   @IsString()
   name?: string;
@@ -41,6 +43,7 @@ export class UpdateProfileDto {
   @Min(0, { message: 'basePrice must be greater than or equal to 0' })
   basePrice?: number;
 
+
   @IsOptional()
   @IsString()
   avatar?: string;
@@ -48,6 +51,7 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   banner?: string;
+
 
   @IsOptional()
   @IsNumber()

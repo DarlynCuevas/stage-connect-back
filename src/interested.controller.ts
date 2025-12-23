@@ -1,10 +1,12 @@
-import { Body, Controller, Post, Get, Param, Patch, Delete } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, Patch, Delete, Inject, forwardRef } from '@nestjs/common';
 
 
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Interested, InterestedStatus } from './interested.entity';
+import { NotificationsGateway } from './notifications.gateway';
+import { UsersService } from './users/users.service';
 
 
 interface CreateInterestedDto {
@@ -21,6 +23,8 @@ export class InterestedController {
   constructor(
     @InjectRepository(Interested)
     private readonly interestedRepo: Repository<Interested>,
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly usersService: UsersService,
   ) {}
 
   @Post()
@@ -46,6 +50,25 @@ export class InterestedController {
     @Body() body: { status: InterestedStatus }
   ) {
     await this.interestedRepo.update(id, { status: body.status });
+
+    // Si el estado es 'accepted', emitir notificación al local
+    if (body.status === 'accepted') {
+      // Buscar el registro con relaciones
+      const interested = await this.interestedRepo.findOne({
+        where: { id },
+        relations: ['artist', 'artist.user', 'venue'],
+      });
+      if (interested) {
+        // Obtener nombre del artista
+        let artistName = interested.artist?.nickName || interested.artist?.user?.name || 'Artista';
+        // Emitir notificación al local (venue)
+        this.notificationsGateway.server.to(`user:${interested.venueId}`).emit('notification.artist-interested', {
+          message: `${artistName} está interesado para el día ${interested.date}`,
+          artistId: interested.artistId,
+          date: interested.date,
+        });
+      }
+    }
     return { id, status: body.status };
   }
 

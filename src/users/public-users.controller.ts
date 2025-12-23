@@ -8,7 +8,17 @@ export class PublicUsersController {
 
   private mapUser(user: any) {
     if (!user) return null;
-    const { user_id, ...rest } = user;
+    // Oculta campos privados
+    const {
+      user_id,
+      passwordHash,
+      password_hash,
+      email,
+      createdAt,
+      updatedAt,
+      // Puedes añadir más campos a ocultar aquí
+      ...rest
+    } = user;
     return { id: user_id, ...rest };
   }
 

@@ -1,3 +1,4 @@
+ 
 // Archivo: src/users/user.entity.ts
 
 import { Entity, Column, PrimaryGeneratedColumn, Unique, OneToOne, ManyToMany, JoinTable } from 'typeorm';
@@ -49,6 +50,7 @@ export class User {
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   banner?: string;
+
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   gender?: string;

@@ -19,6 +19,7 @@ import { NotificationsGateway } from './notifications.gateway';
 import { InterestedModule } from './interested.module';
 import { ContractModule } from './contracts/contract.module';
 import { ContractController } from './contracts/contract.controller';
+import { UploadController } from './upload.controller';
 
 @Module({
   imports: [
@@ -67,7 +68,7 @@ import { ContractController } from './contracts/contract.controller';
     VenueDashboardModule,
     ContractModule,
   ],
-  controllers: [PublicController, NotificationsController, ContractController],
+  controllers: [PublicController, NotificationsController, ContractController, UploadController],
   providers: [NotificationsService, NotificationsGateway],
 })
 export class AppModule {}
