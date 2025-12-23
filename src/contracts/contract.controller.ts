@@ -2,6 +2,7 @@ import { Controller, Get, Param, Res, HttpException, HttpStatus } from '@nestjs/
 import { ContractService } from './contract.service';
 import type { Response } from 'express';
 import * as fs from 'fs';
+import * as path from 'path';
 
 @Controller('contracts')
 export class ContractController {
@@ -14,8 +15,9 @@ export class ContractController {
       if (!fs.existsSync(pdfPath)) {
         throw new HttpException('PDF not found', HttpStatus.NOT_FOUND);
       }
+      const fileName = pdfPath.split(path.sep).pop() || `contrato-${bookingRequestId}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=contract-${bookingRequestId}.pdf`);
+      res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
       fs.createReadStream(pdfPath).pipe(res);
     } catch (err) {
       throw new HttpException('Error generating contract PDF', HttpStatus.INTERNAL_SERVER_ERROR);

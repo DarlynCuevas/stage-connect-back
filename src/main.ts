@@ -38,11 +38,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   // 3. Establecer el prefijo global de la API (opcional, pero limpio)
-  // Log de uso de memoria cada 10 segundos
-  setInterval(() => {
-    const used = process.memoryUsage().rss / 1024 / 1024;
-    console.log(`Memoria usada: ${used.toFixed(2)} MB`);
-  }, 10000);
   app.setGlobalPrefix('api');
 
   // Usar PORT de entorno si está disponible; si no, 4000

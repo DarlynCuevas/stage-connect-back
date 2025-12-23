@@ -30,7 +30,11 @@ export class ContractService {
     // Usar ruta absoluta en la raíz del proyecto
     const pdfDir = path.resolve(process.cwd(), 'contracts');
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-    const pdfPath = path.join(pdfDir, `contract-${bookingRequestId}.pdf`);
+    // Construir nombre de archivo descriptivo
+    const safeArtist = (request.artist?.name || 'artista').replace(/[^a-zA-Z0-9-_]/g, '_');
+    const safeDate = request.eventDate ? String(request.eventDate).slice(0, 10).replace(/[^0-9]/g, '-') : 'fecha';
+    const pdfFileName = `contrato-${safeArtist}-${safeDate}-${bookingRequestId}.pdf`;
+    const pdfPath = path.join(pdfDir, pdfFileName);
 
     // Crear el PDF con pdfkit
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -86,32 +90,4 @@ export class ContractService {
     return pdfPath;
   }
 
-  buildContractHtml(request: Request, requesterFiscal: any, artistFiscal: any): string {
-    // Aquí puedes personalizar el HTML con los datos fiscales
-    return `
-      <html>
-      <head><meta charset="utf-8"><title>Contrato de Actuación</title></head>
-      <body style="font-family: Arial, sans-serif;">
-        <h2>CONTRATO DE PRESTACIÓN DE SERVICIOS MUSICALES</h2>
-        <p><b>Empresa:</b> [Nombre de tu empresa], CIF: [CIF empresa]</p>
-        <p><b>Local:</b> ${request.requester?.name} <br/>
-        ${requesterFiscal ? `${requesterFiscal.razonSocial || ''}<br/>NIF: ${requesterFiscal.dniNif}<br/>${requesterFiscal.direccion}, ${requesterFiscal.ciudad}, ${requesterFiscal.provincia}, ${requesterFiscal.codigoPostal}, ${requesterFiscal.pais}` : ''}</p>
-        <p><b>Artista:</b> ${request.artist?.name} <br/>
-        ${artistFiscal ? `${artistFiscal.razonSocial || ''}<br/>NIF: ${artistFiscal.dniNif}<br/>${artistFiscal.direccion}, ${artistFiscal.ciudad}, ${artistFiscal.provincia}, ${artistFiscal.codigoPostal}, ${artistFiscal.pais}` : ''}</p>
-        <p><b>Fecha:</b> ${request.eventDate}</p>
-        <p><b>Horario:</b> ${request.horaInicio || '--:--'} - ${request.horaFin || '--:--'}</p>
-        <p><b>Lugar:</b> ${request.eventLocation}</p>
-        <p><b>Tipo de evento:</b> ${request.eventType}</p>
-        <p><b>Honorarios:</b> €${request.offeredPrice}</p>
-        <h3>Condiciones</h3>
-        <ul>
-          <li>El Local abonará el importe a la empresa intermediaria antes del evento.</li>
-          <li>La empresa transferirá el pago al artista tras la actuación, descontando la comisión.</li>
-          <li>El artista se compromete a cumplir el rider técnico adjunto.</li>
-        </ul>
-        <p><b>Aceptación digital:</b> Este contrato se considera aceptado digitalmente por ambas partes a través de la plataforma.</p>
-      </body>
-      </html>
-    `;
-  }
 }
