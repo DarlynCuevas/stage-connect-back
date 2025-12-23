@@ -47,7 +47,7 @@ export class RequestsService {
    * Crear una nueva solicitud de booking
    */
   async create(createRequestDto: CreateRequestDto, currentUserId: number): Promise<Request> {
-    const { artistId, eventDate, eventLocation, eventType, offeredPrice, message } = createRequestDto;
+    const { artistId, eventDate, eventLocation, eventType, offeredPrice, message, horaInicio, horaFin } = createRequestDto;
 
     const parsedEventDate = new Date(eventDate);
     console.log('[CREATE SOLICITUD] eventDate recibido:', eventDate, '-> parsed:', parsedEventDate);
@@ -121,6 +121,8 @@ export class RequestsService {
         artist,
         requester,
         eventDate: parsedEventDate,
+        horaInicio,
+        horaFin,
         eventLocation,
         eventType,
         offeredPrice,

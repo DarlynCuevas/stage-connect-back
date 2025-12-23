@@ -36,4 +36,12 @@ export class CreateRequestDto {
     @IsOptional()
     @IsString()
     ciudadLocal?: string;
+
+    @IsOptional()
+    @IsString()
+    horaInicio?: string;
+
+    @IsOptional()
+    @IsString()
+    horaFin?: string;
 }

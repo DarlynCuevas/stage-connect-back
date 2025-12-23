@@ -17,6 +17,8 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { InterestedModule } from './interested.module';
+import { ContractModule } from './contracts/contract.module';
+import { ContractController } from './contracts/contract.controller';
 
 @Module({
   imports: [
@@ -63,8 +65,9 @@ import { InterestedModule } from './interested.module';
     ReviewsModule,
     InterestedModule,
     VenueDashboardModule,
+    ContractModule,
   ],
-  controllers: [PublicController, NotificationsController],
+  controllers: [PublicController, NotificationsController, ContractController],
   providers: [NotificationsService, NotificationsGateway],
 })
 export class AppModule {}

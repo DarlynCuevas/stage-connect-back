@@ -31,6 +31,6 @@ import { UserFiscalDataController } from './user-fiscal-data.controller';
   ],
   providers: [UsersService, UserFiscalDataService],
   controllers: [UsersController, PublicUsersController, UserFiscalDataController],
-  exports: [UsersService, TypeOrmModule],
+  exports: [UsersService, UserFiscalDataService, TypeOrmModule],
 })
 export class UsersModule {}

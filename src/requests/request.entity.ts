@@ -1,3 +1,4 @@
+  // ...existing code...
 // Enum para quién cierra la solicitud
 export enum ClosedBy {
   ARTIST = 'artist',
@@ -37,16 +38,26 @@ export class Request {
   @JoinColumn({ name: 'requester_id' })
   requester: User;
 
+
   // Fecha del evento solicitado
   @Column({ type: 'date', nullable: false })
   eventDate: Date;
-    // Nombre del local
-    @Column({ type: 'varchar', length: 255, nullable: true })
-    nombreLocal: string;
 
-    // Ciudad del local
-    @Column({ type: 'varchar', length: 255, nullable: true })
-    ciudadLocal: string;
+  // Hora de inicio (string tipo 'HH:mm')
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  horaInicio: string;
+
+  // Hora de fin (string tipo 'HH:mm')
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  horaFin: string;
+
+  // Nombre del local
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  nombreLocal: string;
+
+  // Ciudad del local
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  ciudadLocal: string;
 
   // Ubicación del evento
   @Column({ type: 'varchar', length: 255, nullable: false })
@@ -82,6 +93,9 @@ export class Request {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  contractPdfUrl?: string;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
