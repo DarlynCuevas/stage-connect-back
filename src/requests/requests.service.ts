@@ -9,6 +9,7 @@ import { ArtistProfile } from '../users/artist-profile.entity';
 import { RequestsGateway } from './requests.gateway';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
 import { BlockedDaysService } from '../blocked-days/blocked-days.service';
+import { ContractService } from '../contracts/contract.service';
 
 @Injectable()
 export class RequestsService {
@@ -23,6 +24,7 @@ export class RequestsService {
     private readonly blockedDayRepository: Repository<BlockedDay>,
     private readonly requestsGateway: RequestsGateway,
     private readonly blockedDaysService: BlockedDaysService,
+    private readonly contractService: ContractService,
   ) {}
 
   /**
@@ -239,6 +241,13 @@ export class RequestsService {
         eventDateType: typeof request.eventDate,
       });
       await this.blockedDaysService.create(request.artist.user_id, request.eventDate);
+      // Generar contrato PDF
+      try {
+        await this.contractService.generateContractPdf(request.id);
+        console.log('[CONTRATO] Contrato PDF generado para request', request.id);
+      } catch (err) {
+        console.error('[CONTRATO] Error generando contrato PDF:', err);
+      }
     }
     const saved = await this.requestsRepository.save(request);
 

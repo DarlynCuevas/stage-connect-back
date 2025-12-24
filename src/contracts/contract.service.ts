@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import * as fs from 'fs';
 import * as path from 'path';
 import PDFDocument from 'pdfkit';
+import { v2 as cloudinary } from 'cloudinary';
 import { Request } from '../requests/request.entity';
 import { UserFiscalDataService } from '../users/user-fiscal-data.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -27,19 +27,15 @@ export class ContractService {
     const requesterFiscal = request.requester?.user_id ? await this.userFiscalDataService.findByUserId(request.requester.user_id) : null;
     const artistFiscal = request.artist?.user_id ? await this.userFiscalDataService.findByUserId(request.artist.user_id) : null;
 
-    // Usar ruta absoluta en la raíz del proyecto
-    const pdfDir = path.resolve(process.cwd(), 'contracts');
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
     // Construir nombre de archivo descriptivo
     const safeArtist = (request.artist?.name || 'artista').replace(/[^a-zA-Z0-9-_]/g, '_');
     const safeDate = request.eventDate ? String(request.eventDate).slice(0, 10).replace(/[^0-9]/g, '-') : 'fecha';
     const pdfFileName = `contrato-${safeArtist}-${safeDate}-${bookingRequestId}.pdf`;
-    const pdfPath = path.join(pdfDir, pdfFileName);
 
-    // Crear el PDF con pdfkit
+    // Crear el PDF en memoria
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
-    const stream = fs.createWriteStream(pdfPath);
-    doc.pipe(stream);
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
 
     // Construir el contenido del contrato
     doc.fontSize(18).text('CONTRATO DE PRESTACIÓN DE SERVICIOS MUSICALES', { align: 'center' });
@@ -77,17 +73,36 @@ export class ContractService {
 
     doc.end();
 
-    // Esperar a que el PDF se termine de escribir
+    // Esperar a que el PDF se termine de generar en memoria
     await new Promise<void>((resolve, reject) => {
-      stream.on('finish', resolve);
-      stream.on('error', reject);
+      doc.on('end', resolve);
+      doc.on('error', reject);
     });
+    const pdfBuffer = Buffer.concat(chunks);
 
-    // Guardar la ruta en la base de datos
-    request.contractPdfUrl = pdfPath;
-    await this.bookingRequestRepo.save(request);
-
-    return pdfPath;
+    // Subir a Cloudinary y esperar la URL
+    const cloudinaryUrl: string = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'raw',
+          public_id: `contracts/${pdfFileName}`,
+          folder: 'contracts',
+          format: 'pdf',
+        },
+        async (error, result) => {
+          if (error) return reject(error);
+          if (result && result.secure_url) {
+            request.contractPdfUrl = result.secure_url;
+            await this.bookingRequestRepo.save(request);
+            resolve(result.secure_url);
+          } else {
+            reject(new Error('No Cloudinary URL'));
+          }
+        }
+      );
+      uploadStream.end(pdfBuffer);
+    });
+    return cloudinaryUrl;
   }
 
 }

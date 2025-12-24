@@ -9,12 +9,14 @@ import { RequestsGateway } from './requests.gateway';
 import { AuthModule } from '../auth/auth.module';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
 import { BlockedDaysModule } from '../blocked-days/blocked-days.module';
+import { ContractModule } from '../contracts/contract.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Request, User, ArtistProfile, BlockedDay]),
     AuthModule,
     BlockedDaysModule,
+    ContractModule,
   ],
   providers: [RequestsService, RequestsGateway],
   controllers: [RequestsController],
