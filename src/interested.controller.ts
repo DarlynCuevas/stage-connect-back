@@ -1,3 +1,4 @@
+
 import { Body, Controller, Post, Get, Param, Patch, Delete, Inject, forwardRef } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { InterestedSafeDto } from './interested/dto/interested-safe.dto';
@@ -89,4 +90,31 @@ export class InterestedController {
     await this.interestedRepo.delete(id);
     return { id, deleted: true };
   }
+
+    @Get('artist/:artistId')
+    async getInterestedByArtist(@Param('artistId') artistId: number) {
+      const result = await this.interestedRepo.find({
+        where: { artistId },
+        relations: ['manager', 'artist', 'artist.user', 'venue', 'venue.user'],
+        order: { createdAt: 'DESC' },
+      });
+      // Map venue.user fields into venue for each interested
+      const mapped = result.map((item) => {
+        let venueData = {};
+        if (item.venue && item.venue.user) {
+          venueData = {
+            user_id: item.venue.user.user_id,
+            name: item.venue.user.name,
+            avatar: item.venue.user.avatar,
+            city: item.venue.user.city,
+            country: item.venue.user.country,
+          };
+        }
+        return {
+          ...item,
+          venue: venueData ?? null,
+        };
+      });
+      return plainToInstance(InterestedSafeDto, mapped, { excludeExtraneousValues: true });
+    }
 }

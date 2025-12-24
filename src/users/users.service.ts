@@ -346,7 +346,8 @@ export class UsersService {
     }
 
     if (filters.query) {
-      // Buscar por coincidencia parcial en cualquier parte del nombre o nickname
+        // Log de nombres y nicknames de los usuarios encontrados antes del filtrado por query
+      // Buscar solo por nombre o nickname (no email ni ciudad)
       const words = filters.query
         .toLowerCase()
         .normalize('NFD')
@@ -359,16 +360,14 @@ export class UsersService {
         if (words.length === 1) {
           params['q'] = `%${words[0]}%`;
           if (role === 'Local') {
-            qb.andWhere(`(unaccent(LOWER(user.name)) ILIKE unaccent(:q) OR unaccent(LOWER(user.email)) ILIKE unaccent(:q))`, params);
+            qb.andWhere(`unaccent(LOWER(user.name)) ILIKE unaccent(:q)`, params);
           } else if (role === 'Artista') {
             qb.andWhere(`(
               unaccent(LOWER(user.name)) ILIKE unaccent(:q)
               OR unaccent(LOWER(profile.nick_name)) ILIKE unaccent(:q)
-              OR unaccent(LOWER(user.email)) ILIKE unaccent(:q)
-              OR unaccent(LOWER(user.city)) ILIKE unaccent(:q)
             )`, params);
           } else {
-            qb.andWhere(`(unaccent(LOWER(user.name)) ILIKE unaccent(:q) OR unaccent(LOWER(user.email)) ILIKE unaccent(:q))`, params);
+            qb.andWhere(`unaccent(LOWER(user.name)) ILIKE unaccent(:q)`, params);
           }
         } else {
           const orConditions: string[] = [];
@@ -376,16 +375,14 @@ export class UsersService {
             const param = `q${idx}`;
             params[param] = `%${word}%`;
             if (role === 'Local') {
-              orConditions.push(`(unaccent(LOWER(user.name)) ILIKE unaccent(:${param}) OR unaccent(LOWER(user.email)) ILIKE unaccent(:${param}))`);
+              orConditions.push(`unaccent(LOWER(user.name)) ILIKE unaccent(:${param})`);
             } else if (role === 'Artista') {
               orConditions.push(`(
                 unaccent(LOWER(user.name)) ILIKE unaccent(:${param})
                 OR unaccent(LOWER(profile.nick_name)) ILIKE unaccent(:${param})
-                OR unaccent(LOWER(user.email)) ILIKE unaccent(:${param})
-                OR unaccent(LOWER(user.city)) ILIKE unaccent(:${param})
               )`);
             } else {
-              orConditions.push(`(unaccent(LOWER(user.name)) ILIKE unaccent(:${param}) OR unaccent(LOWER(user.email)) ILIKE unaccent(:${param}))`);
+              orConditions.push(`unaccent(LOWER(user.name)) ILIKE unaccent(:${param})`);
             }
           });
           qb.andWhere(orConditions.join(' OR '), params);
@@ -394,15 +391,21 @@ export class UsersService {
     }
 
     if (filters.country) {
-      qb.andWhere('user.country = :country', { country: filters.country });
+      qb.andWhere(
+        "unaccent(lower(user.country)) = unaccent(lower(:country)) AND user.country IS NOT NULL AND user.country != ''",
+        { country: filters.country }
+      );
     }
 
-    if (filters.city && filters.city !== 'undefined' && filters.city !== '') {
+    if (filters.city && filters.city !== 'undefined' && filters.city !== '' && filters.city !== undefined) {
       qb.andWhere('user.city = :city', { city: filters.city });
     }
 
     // No ordenamos aún, para poder calcular populares y destacados
     const users = await qb.getMany();
+    // Log de nombres y nicknames de los usuarios encontrados antes del filtrado por query
+    if (role === 'Artista') {
+    }
 
 
 
@@ -511,11 +514,11 @@ export class UsersService {
       // Obtener todos los user_id de los artistas
       const artistIds = users.map(u => u.user_id);
       // Traer todos los días bloqueados de todos los artistas en una sola consulta
-      const allBlockedDays = await this.blockedDaysRepository.find({
+      const allBlockedDays = artistIds.length > 0 ? await this.blockedDaysRepository.find({
         where: {
           artist: { user_id: In(artistIds) },
         },
-      });
+      }) : [];
       // Mapear por artist_id
       const blockedDaysMap: Record<number, string[]> = {};
       allBlockedDays.forEach(bd => {
@@ -530,18 +533,18 @@ export class UsersService {
         blockedDaysMap[id].push(dateStr);
       });
 
-      // Calcular bookings aceptados por artista
-        console.log('[DEBUG] artistIds para masContratados:', artistIds);
-      const bookingsPorArtistaRaw = await this.requestsRepository
-        .createQueryBuilder('request')
-        .select('request.artist_id', 'artistId')
-        .addSelect('COUNT(*)', 'total')
-        .where('request.status = :status', { status: 'Accepted' })
-        .andWhere('request.artist_id IN (:...artistIds)', { artistIds })
-        .groupBy('request.artist_id')
-        .getRawMany();
-        console.log('[DEBUG] bookingsPorArtistaRaw:', bookingsPorArtistaRaw);
-
+      // Calcular bookings aceptados por artista solo si hay artistIds
+      let bookingsPorArtistaRaw: any[] = [];
+      if (artistIds.length > 0) {
+        bookingsPorArtistaRaw = await this.requestsRepository
+          .createQueryBuilder('request')
+          .select('request.artist_id', 'artistId')
+          .addSelect('COUNT(*)', 'total')
+          .where('request.status = :status', { status: 'Accepted' })
+          .andWhere('request.artist_id IN (:...artistIds)', { artistIds })
+          .groupBy('request.artist_id')
+          .getRawMany();
+      }
       const bookingsPorArtista: Record<number, number> = {};
       bookingsPorArtistaRaw.forEach(row => {
         bookingsPorArtista[Number(row.artistId)] = Number(row.total);
@@ -578,6 +581,7 @@ export class UsersService {
         );
       }
       if (filters.priceMax !== undefined) {
+          // Log de artistas después de filtrar por nombre/nickname
         filtered = filtered.filter(
           u => (u.basePrice || 0) <= filters.priceMax!
         );
@@ -593,21 +597,16 @@ export class UsersService {
       if (filters.verified !== undefined) {
         filtered = filtered.filter(u => u.verified === filters.verified);
       }
-      // Si hay query, filtrar también por nickName y bio en el perfil
-      if (filters.query && filters.query.trim() !== '') {
-        const q = filters.query.trim().toLowerCase();
-        filtered = filtered.filter(u =>
-          (u.nickName && u.nickName.toLowerCase().includes(q))
-          || (u.bio && u.bio.toLowerCase().includes(q))
-          || (u.city && u.city.toLowerCase().includes(q))
-        );
-      }
+      // Eliminado filtro redundante por query (ya se filtra en SQL)
+      // Log para ver el objeto completo de los artistas filtrados
 
       // Simular reviewsCount si no existe (para pruebas y paginación)
       const withReviews = filtered.map((u, idx) => ({
         ...u,
         reviewsCount: ('reviewsCount' in u && (u as any).reviewsCount !== undefined ? (u as any).reviewsCount : Math.floor(Math.random() * 100))
       }));
+
+      // Log para depuración: ver qué artistas llegan a discoveryBlocks
 
       // Usar función genérica discoveryBlocks con page y pageSize originales
             // Calcular fecha límite para 'recién llegados' (últimos 30 días)
