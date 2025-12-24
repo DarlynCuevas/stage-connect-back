@@ -2,6 +2,7 @@
 // Archivo: src/users/user.entity.ts
 
 import { Entity, Column, PrimaryGeneratedColumn, Unique, OneToOne, ManyToMany, JoinTable } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { ArtistProfile } from './artist-profile.entity';
 import { ManagerProfile } from './manager-profile.entity';
 import { VenueProfile } from './venue-profile.entity';
@@ -19,11 +20,16 @@ export class User {
   @Column({ type: 'varchar', length: 100, nullable: false })
   name: string;
 
-  @Column({ length: 100 })
-  email: string;
 
+
+ 
+  @Exclude()
   @Column({ name: 'password_hash' }) // El nombre de la columna en la BBDD
   passwordHash: string; // Almacenará la contraseña encriptada
+
+  @Exclude()
+  @Column({ length: 100 })
+  email: string;
 
   @Column({
     type: 'enum',

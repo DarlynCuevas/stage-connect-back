@@ -5,6 +5,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
+import { plainToInstance } from 'class-transformer';
+import { RequestSafeDto } from './dto/request-safe.dto';
 
 @Controller('requests')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -41,7 +43,8 @@ export class RequestsController {
   @Roles('Local', 'Promotor')
   async getSentRequests(@Request() req) {
     const currentUserId = req.user?.user_id;
-    return this.requestsService.findBySenderUserId(currentUserId);
+    const result = await this.requestsService.findBySenderUserId(currentUserId);
+    return plainToInstance(RequestSafeDto, result, { excludeExtraneousValues: true });
   }
 
   /**

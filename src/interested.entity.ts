@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
+import { Type } from 'class-transformer';
 import { VenueProfile } from './users/venue-profile.entity';
 import { User } from './users/user.entity';
 import { ArtistProfile } from './users/artist-profile.entity';
@@ -28,6 +29,7 @@ export class Interested {
 
   @Column()
   artistId: number;
+  @Type(() => ArtistProfile)
   @ManyToOne(() => ArtistProfile, { nullable: false })
   @JoinColumn({ name: 'artistId' })
   artist: ArtistProfile;

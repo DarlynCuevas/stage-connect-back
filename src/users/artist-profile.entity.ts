@@ -1,5 +1,6 @@
 
 import { Entity, Column, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
+import { Type } from 'class-transformer';
 import { User } from './user.entity';
 
 @Entity('artist_profiles')
@@ -7,6 +8,7 @@ export class ArtistProfile {
   @PrimaryColumn({ name: 'user_id' })
   user_id: number;
 
+  @Type(() => User)
   @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;

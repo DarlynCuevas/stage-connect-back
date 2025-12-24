@@ -1,12 +1,13 @@
 import { Body, Controller, Post, Get, Param, Patch, Delete, Inject, forwardRef } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { InterestedSafeDto } from './interested/dto/interested-safe.dto';
 
-
-
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+ 
 import { Interested, InterestedStatus } from './interested.entity';
 import { NotificationsGateway } from './notifications.gateway';
 import { UsersService } from './users/users.service';
+import { InjectRepository } from '@nestjs/typeorm';
 
 
 interface CreateInterestedDto {
@@ -44,7 +45,8 @@ export class InterestedController {
     }
     return this.interestedRepo.save(interestedList);
   }
-    @Patch(':id')
+
+  @Patch(':id')
   async updateInterestedStatus(
     @Param('id') id: number,
     @Body() body: { status: InterestedStatus }
@@ -72,16 +74,17 @@ export class InterestedController {
     return { id, status: body.status };
   }
 
-    @Get('venue/:venueId')
+  @Get('venue/:venueId')
   async getInterestedByVenue(@Param('venueId') venueId: number) {
-    return this.interestedRepo.find({
+    const result = await this.interestedRepo.find({
       where: { venueId },
-      relations: ['manager', 'artist', 'venue'],
+      relations: ['manager', 'artist', 'artist.user', 'venue'],
       order: { createdAt: 'DESC' },
     });
+    return plainToInstance(InterestedSafeDto, result, { excludeExtraneousValues: true });
   }
-
-    @Delete(':id')
+  
+  @Delete(':id')
   async deleteInterested(@Param('id') id: number) {
     await this.interestedRepo.delete(id);
     return { id, deleted: true };
