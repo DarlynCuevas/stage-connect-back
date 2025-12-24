@@ -10,6 +10,8 @@ import { PromoterProfile } from './promoter-profile.entity';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { PublicUsersController } from './public-users.controller';
+import { PublicVenuesController } from './public-venues.controller';
+import { PublicPromotersController } from './public-promoters.controller';
 import { Request } from '../requests/request.entity';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
 import { UserFiscalData } from './user-fiscal-data.entity';
@@ -30,7 +32,7 @@ import { UserFiscalDataController } from './user-fiscal-data.controller';
     ]), 
   ],
   providers: [UsersService, UserFiscalDataService],
-  controllers: [UsersController, PublicUsersController, UserFiscalDataController],
+  controllers: [UsersController, PublicUsersController, PublicVenuesController, PublicPromotersController, UserFiscalDataController],
   exports: [UsersService, UserFiscalDataService, TypeOrmModule],
 })
 export class UsersModule {}

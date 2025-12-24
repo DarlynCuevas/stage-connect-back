@@ -405,17 +405,31 @@ export class UsersService {
     const users = await qb.getMany();
 
 
+
     // Para managers, cargar perfil y filtrar por featured, verified y favorite si corresponde
-    if (role === 'Manager') {
-      let usersWithProfiles = await Promise.all(
-        users.map(async (user) => {
-          const profile = await this.managerProfileRepository.findOne({ where: { user_id: user.user_id } });
-          return {
-            ...user,
-            ...profile,
-          };
-        })
-      );
+    if (role === 'Manager' || role === 'Promotor' || role === 'Promoter') {
+      let usersWithProfiles;
+      if (role === 'Manager') {
+        usersWithProfiles = await Promise.all(
+          users.map(async (user) => {
+            const profile = await this.managerProfileRepository.findOne({ where: { user_id: user.user_id } });
+            return {
+              ...user,
+              ...profile,
+            };
+          })
+        );
+      } else {
+        usersWithProfiles = await Promise.all(
+          users.map(async (user) => {
+            const profile = await this.promoterProfileRepository.findOne({ where: { user_id: user.user_id } });
+            return {
+              ...user,
+              ...profile,
+            };
+          })
+        );
+      }
 
       // Filtrar por featured si se solicita
       if (filters.featured !== undefined) {
@@ -436,6 +450,59 @@ export class UsersService {
         page: (filters as any).page ? Number((filters as any).page) : 1,
         pageSize: (filters as any).pageSize ? Number((filters as any).pageSize) : 20,
       });
+    }
+
+    // Para venues (Local), agrupar igual que artistas
+    if (role === 'Local') {
+      // Puedes agregar aquí lógica adicional para cargar perfiles de venue si tienes una tabla específica
+      let usersWithProfiles = users;
+
+      // Simular reviewsCount si no existe (para pruebas y paginación)
+      const withReviews = usersWithProfiles.map((u, idx) => ({
+        ...u,
+        reviewsCount: ('reviewsCount' in u && (u as any).reviewsCount !== undefined ? (u as any).reviewsCount : Math.floor(Math.random() * 100))
+      }));
+
+      // Usar función genérica discoveryBlocks con page y pageSize originales
+      const page = (filters as any).page ? Number((filters as any).page) : 1;
+      const pageSize = (filters as any).pageSize ? Number((filters as any).pageSize) : 20;
+      const discovery = discoveryBlocks(withReviews, {
+        reviewsCountKey: 'reviewsCount',
+        createdAtKey: 'createdAt',
+        idKey: 'user_id',
+        page,
+        pageSize,
+      });
+
+      // Obtener la ciudad del usuario desde los filtros
+      const ciudadUsuario = filters.city ? filters.city.toLowerCase() : null;
+      let enCiudad: typeof withReviews = [];
+      if (ciudadUsuario) {
+        const idsYaMostrados = new Set([
+          ...discovery.populares.map(a => a.user_id),
+          ...discovery.destacados.map(a => a.user_id)
+        ]);
+        enCiudad = withReviews.filter(
+          a => a.city && a.city.toLowerCase() === ciudadUsuario && !idsYaMostrados.has(a.user_id)
+        );
+      }
+
+      // Recien llegados (últimos 30 días)
+      const fechaLimite = new Date();
+      fechaLimite.setDate(fechaLimite.getDate() - 30);
+      const recienLlegados = withReviews.filter(a => {
+        if (!a.createdAt) return false;
+        return new Date(a.createdAt) >= fechaLimite;
+      });
+
+      return {
+        populares: discovery.populares,
+        destacados: discovery.destacados,
+        enCiudad,
+        recienLlegados,
+        resto: discovery.resto,
+        pagination: discovery.pagination,
+      };
     }
 
     // For artists, load profiles and filter by artist-specific fields
@@ -553,7 +620,6 @@ export class UsersService {
       const page = (filters as any).page ? Number((filters as any).page) : 1;
       const pageSize = (filters as any).pageSize ? Number((filters as any).pageSize) : 20;
       const discovery = discoveryBlocks(withReviews, {
-        featuredKey: 'featured',
         reviewsCountKey: 'reviewsCount',
         createdAtKey: 'createdAt',
         idKey: 'user_id',
