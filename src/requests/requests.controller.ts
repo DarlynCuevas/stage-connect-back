@@ -32,7 +32,18 @@ export class RequestsController {
   @Roles('Artista')
   async getArtistRequests(@Request() req) {
     const currentUserId = req.user?.user_id;
-    return this.requestsService.findByArtistUserId(currentUserId);
+    const requests = await this.requestsService.findByArtistUserId(currentUserId);
+    // Sanitizar artist y requester en cada request
+    const sanitizeUser = (user: any) => {
+      if (!user) return user;
+      const { password, passwordHash, password_hash, email, ...rest } = user;
+      return rest;
+    };
+    return requests.map(req => ({
+      ...req,
+      artist: sanitizeUser(req.artist),
+      requester: sanitizeUser(req.requester),
+    }));
   }
 
   /**
@@ -53,7 +64,18 @@ export class RequestsController {
    */
   @Get('confirmed/:artistId')
   async getConfirmedRequests(@Param('artistId', ParseIntPipe) artistId: number) {
-    return this.requestsService.findConfirmedByArtistId(artistId);
+    const requests = await this.requestsService.findConfirmedByArtistId(artistId);
+    // Sanitizar artist y requester en cada request
+    const sanitizeUser = (user: any) => {
+      if (!user) return user;
+      const { password, passwordHash, password_hash, email, ...rest } = user;
+      return rest;
+    };
+    return requests.map(req => ({
+      ...req,
+      artist: sanitizeUser(req.artist),
+      requester: sanitizeUser(req.requester),
+    }));
   }
 
   /**

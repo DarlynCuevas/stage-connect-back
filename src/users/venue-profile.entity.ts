@@ -42,4 +42,8 @@ export class VenueProfile {
 
   @Column({ type: 'boolean', default: false })
   favorite: boolean;
+
+  // Tipo de local (Bar, Discoteca, etc)
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  type?: string;
 }

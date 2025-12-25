@@ -28,6 +28,18 @@ export class PublicPromotersController {
 
     // Lógica idéntica: role Promotor
     const result = await this.usersService.findByRoleWithFilters('Promotor', filters);
+    // Sanitizar todos los usuarios en todos los bloques
+    const sanitize = (arr: any[]) => arr.map(u => {
+      const { password, passwordHash, password_hash, email, ...rest } = u;
+      return rest;
+    });
+    if (result && typeof result === 'object') {
+      for (const key of Object.keys(result)) {
+        if (Array.isArray(result[key])) {
+          result[key] = sanitize(result[key]);
+        }
+      }
+    }
     return result;
   }
 }

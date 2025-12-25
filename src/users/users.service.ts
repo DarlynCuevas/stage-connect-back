@@ -457,8 +457,16 @@ export class UsersService {
 
     // Para venues (Local), agrupar igual que artistas
     if (role === 'Local') {
-      // Puedes agregar aquí lógica adicional para cargar perfiles de venue si tienes una tabla específica
-      let usersWithProfiles = users;
+      // JOIN con venue_profiles para obtener type y capacity
+      const userIds = users.map(u => u.user_id);
+      const profiles = userIds.length > 0 ? await this.venueProfileRepository.find({ where: { user_id: In(userIds) } }) : [];
+      const profileMap = new Map(profiles.map(p => [p.user_id, p]));
+
+      let usersWithProfiles = users.map(u => ({
+        ...u,
+        type: profileMap.get(u.user_id)?.type || null,
+        capacity: profileMap.get(u.user_id)?.capacity || null,
+      }));
 
       // Simular reviewsCount si no existe (para pruebas y paginación)
       const withReviews = usersWithProfiles.map((u, idx) => ({

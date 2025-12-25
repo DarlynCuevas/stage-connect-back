@@ -48,6 +48,9 @@ export class ArtistProfile {
   @Column({ type: 'simple-array', nullable: true })
   gallery?: string[];
 
+  // Tipo de artista (Artista, DJ, etc)
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  type?: string;
   // Credibilidad y Experiencia
   @Column({ name: 'years_of_experience', type: 'int', nullable: true })
   yearsOfExperience?: number;

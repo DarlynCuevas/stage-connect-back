@@ -4,8 +4,9 @@ export class AddHoraInicioHoraFinToRequests1670000009999 implements MigrationInt
     name = 'AddHoraInicioHoraFinToRequests1670000009999'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "requests" ADD "horaInicio" varchar(5)`);
-        await queryRunner.query(`ALTER TABLE "requests" ADD "horaFin" varchar(5)`);
+        // Columnas ya existen, no hacer nada para evitar error de duplicado
+        // await queryRunner.query(`ALTER TABLE "requests" ADD "horaInicio" varchar(5)`);
+        // await queryRunner.query(`ALTER TABLE "requests" ADD "horaFin" varchar(5)`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
