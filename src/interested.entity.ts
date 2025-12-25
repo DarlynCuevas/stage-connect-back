@@ -5,7 +5,7 @@ import { User } from './users/user.entity';
 import { ArtistProfile } from './users/artist-profile.entity';
 
 
-export type InterestedStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
+export type InterestedStatus = 'pending' | 'interested' | 'accepted' | 'rejected' | 'withdrawn';
 
 @Entity()
 export class Interested {
