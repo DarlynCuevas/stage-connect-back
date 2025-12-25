@@ -32,13 +32,21 @@ export class InterestedController {
   @Post()
   async createInterested(@Body() body: CreateInterestedDto) {
     const { venueId, managerId, artistIds, date, price } = body;
+    // Convertir fecha a formato YYYY-MM-DD si viene como DD/MM/YYYY
+    let formattedDate = date;
+    if (typeof date === 'string' && date.includes('/')) {
+      const [day, month, year] = date.split('/');
+      if (day && month && year) {
+        formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+    }
     const interestedList: Interested[] = [];
     for (const artistId of artistIds) {
       const interested = this.interestedRepo.create({
         venueId,
         managerId: managerId ?? null,
         artistId,
-        date,
+        date: formattedDate,
         price: price ?? null,
         status: 'pending',
       });
