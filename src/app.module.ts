@@ -13,6 +13,7 @@ import { ManagerRequestsModule } from './manager-requests/manager-requests.modul
 import { PublicController } from './public.controller';
 import { ReviewsModule } from './reviews/reviews.module';
 import { VenueDashboardModule } from './venue-dashboard/venue-dashboard.module';
+import { MessagesModule } from './messages/messages.module';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
@@ -67,6 +68,7 @@ import { UploadController } from './upload.controller';
     InterestedModule,
     VenueDashboardModule,
     ContractModule,
+    MessagesModule,
   ],
   controllers: [PublicController, NotificationsController, ContractController, UploadController],
   providers: [NotificationsService, NotificationsGateway],
