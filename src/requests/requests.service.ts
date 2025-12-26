@@ -10,6 +10,7 @@ import { RequestsGateway } from './requests.gateway';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
 import { BlockedDaysService } from '../blocked-days/blocked-days.service';
 import { ContractService } from '../contracts/contract.service';
+import { Interested } from '../interested.entity';
 
 @Injectable()
 export class RequestsService {
@@ -22,6 +23,8 @@ export class RequestsService {
     private readonly artistProfileRepository: Repository<ArtistProfile>,
     @InjectRepository(BlockedDay)
     private readonly blockedDayRepository: Repository<BlockedDay>,
+    @InjectRepository(Interested)
+    private readonly interestedRepository: Repository<Interested>,
     private readonly requestsGateway: RequestsGateway,
     private readonly blockedDaysService: BlockedDaysService,
     private readonly contractService: ContractService,
@@ -241,6 +244,24 @@ export class RequestsService {
         eventDateType: typeof request.eventDate,
       });
       await this.blockedDaysService.create(request.artist.user_id, request.eventDate);
+      // --- NUEVO: Actualizar interesado a 'accepted' si existe ---
+      // Convertir la fecha a string YYYY-MM-DD para comparar con Interested
+      const eventDateStr = request.eventDate instanceof Date
+        ? request.eventDate.toISOString().slice(0, 10)
+        : String(request.eventDate);
+      const interested = await this.interestedRepository.findOne({
+        where: {
+          artistId: request.artist.user_id,
+          venueId: request.requester.user_id,
+          date: eventDateStr,
+          status: 'interested',
+        },
+      });
+      if (interested) {
+        interested.status = 'accepted';
+        await this.interestedRepository.save(interested);
+      }
+      // --- FIN NUEVO ---
       // Generar contrato PDF
       try {
         await this.contractService.generateContractPdf(request.id);

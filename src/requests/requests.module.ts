@@ -10,10 +10,11 @@ import { AuthModule } from '../auth/auth.module';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
 import { BlockedDaysModule } from '../blocked-days/blocked-days.module';
 import { ContractModule } from '../contracts/contract.module';
+import { Interested } from '../interested.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Request, User, ArtistProfile, BlockedDay]),
+    TypeOrmModule.forFeature([Request, User, ArtistProfile, BlockedDay, Interested]),
     AuthModule,
     BlockedDaysModule,
     ContractModule,

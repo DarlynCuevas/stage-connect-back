@@ -26,13 +26,21 @@ export class RequestsController {
 
   /**
    * GET /requests
-   * Obtener todas las solicitudes del artista logueado
+   * Obtener todas las solicitudes del usuario logueado (artista, local, promotor, manager)
    */
   @Get()
-  @Roles('Artista')
-  async getArtistRequests(@Request() req) {
+  @Roles('Artista', 'Local', 'Promotor', 'Manager')
+  async getUserRequests(@Request() req) {
     const currentUserId = req.user?.user_id;
-    const requests = await this.requestsService.findByArtistUserId(currentUserId);
+    const userRole = req.user?.role;
+    let requests: import('./request.entity').Request[] = [];
+    if (userRole === 'Artista') {
+      requests = await this.requestsService.findByArtistUserId(currentUserId);
+    } else if (userRole === 'Local' || userRole === 'Promotor') {
+      requests = await this.requestsService.findBySenderUserId(currentUserId);
+    } else if (userRole === 'Manager') {
+      requests = await this.requestsService.findByManagerId(currentUserId);
+    }
     // Sanitizar artist y requester en cada request
     const sanitizeUser = (user: any) => {
       if (!user) return user;
