@@ -404,6 +404,7 @@ export class UsersService {
     // No ordenamos aún, para poder calcular populares y destacados
     const users = await qb.getMany();
     // Log de nombres y nicknames de los usuarios encontrados antes del filtrado por query
+    console.log('[Discovery] Usuarios encontrados por query:', filters.query, users.map(u => u.name));
     if (role === 'Artista') {
     }
 
@@ -518,7 +519,6 @@ export class UsersService {
 
     // For artists, load profiles and filter by artist-specific fields
     if (role === 'Artista') {
-
       // Obtener todos los user_id de los artistas
       const artistIds = users.map(u => u.user_id);
       // Traer todos los días bloqueados de todos los artistas en una sola consulta
@@ -575,7 +575,6 @@ export class UsersService {
 
       // Filtros existentes
       let filtered = usersWithProfiles;
-      // Log para depuración: ver valor recibido y fechas bloqueadas
       if (filters.date) {
         const dateStr = filters.date;
         filtered = filtered.filter(u => {
@@ -589,7 +588,6 @@ export class UsersService {
         );
       }
       if (filters.priceMax !== undefined) {
-          // Log de artistas después de filtrar por nombre/nickname
         filtered = filtered.filter(
           u => (u.basePrice || 0) <= filters.priceMax!
         );
@@ -606,24 +604,45 @@ export class UsersService {
         filtered = filtered.filter(u => u.verified === filters.verified);
       }
       // Eliminado filtro redundante por query (ya se filtra en SQL)
-      // Log para ver el objeto completo de los artistas filtrados
 
+      // Si hay filtros activos, devolver todos los artistas en array plano paginado
+      const hasFilters = !!(filters.query || (filters.genre && filters.genre.length) || filters.country || filters.city || filters.priceMin || filters.priceMax || filters.date || filters.verified !== undefined);
+      if (hasFilters) {
+        // Paginar manualmente y devolver en 'resto' para compatibilidad
+        const page = (filters as any).page ? Number((filters as any).page) : 1;
+        const pageSize = (filters as any).pageSize ? Number((filters as any).pageSize) : 20;
+        const total = filtered.length;
+        const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+        return {
+          populares: [],
+          destacados: [],
+          recienLlegados: [],
+          enCiudad: [],
+          masContratados: [],
+          resto: paginated,
+          pagination: {
+            page,
+            pageSize,
+            total,
+            hasNextPage: page * pageSize < total,
+          },
+        };
+      }
+
+      // Si no hay filtros, usar discoveryBlocks y bloques agrupados
       // Simular reviewsCount si no existe (para pruebas y paginación)
       const withReviews = filtered.map((u, idx) => ({
         ...u,
         reviewsCount: ('reviewsCount' in u && (u as any).reviewsCount !== undefined ? (u as any).reviewsCount : Math.floor(Math.random() * 100))
       }));
 
-      // Log para depuración: ver qué artistas llegan a discoveryBlocks
-
       // Usar función genérica discoveryBlocks con page y pageSize originales
-            // Calcular fecha límite para 'recién llegados' (últimos 30 días)
-            const fechaLimite = new Date();
-            fechaLimite.setDate(fechaLimite.getDate() - 30);
-            const recienLlegados = withReviews.filter(a => {
-              if (!a.createdAt) return false;
-              return new Date(a.createdAt) >= fechaLimite;
-            });
+      const fechaLimite = new Date();
+      fechaLimite.setDate(fechaLimite.getDate() - 30);
+      const recienLlegados = withReviews.filter(a => {
+        if (!a.createdAt) return false;
+        return new Date(a.createdAt) >= fechaLimite;
+      });
       const page = (filters as any).page ? Number((filters as any).page) : 1;
       const pageSize = (filters as any).pageSize ? Number((filters as any).pageSize) : 20;
       const discovery = discoveryBlocks(withReviews, {
@@ -636,7 +655,6 @@ export class UsersService {
 
       // Obtener la ciudad del usuario desde los filtros
       const ciudadUsuario = filters.city ? filters.city.toLowerCase() : null;
-      // Unir todos los artistas de la respuesta (populares, destacados, resto)
       let enCiudad: typeof withReviews = [];
       if (ciudadUsuario) {
         const idsYaMostrados = new Set([

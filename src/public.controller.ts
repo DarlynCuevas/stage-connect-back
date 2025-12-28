@@ -117,7 +117,24 @@ export class PublicController {
       date,
     };
     const artists = await this.usersService.findByRoleWithFilters('Artista', filters);
-    // Mapear cada array del objeto, incluyendo recienLlegados
+    // Si hay algún filtro activo, devolver solo el array plano paginado
+    const hasFilters = !!(filters.query || (filters.genre && filters.genre.length) || filters.country || filters.city || filters.priceMin || filters.priceMax || filters.date);
+    if (hasFilters) {
+      // Si la respuesta es agrupada, tomar solo el array paginado (resto) y la paginación
+      if (artists && typeof artists === 'object' && Array.isArray(artists.resto)) {
+        return {
+          results: artists.resto.map((u) => this.mapUser(u)).filter(Boolean),
+          pagination: artists.pagination || {},
+        };
+      } else if (Array.isArray(artists)) {
+        // Si la respuesta ya es plana
+        return {
+          results: artists.map((u) => this.mapUser(u)).filter(Boolean),
+          pagination: {},
+        };
+      }
+    }
+    // Sin filtros: devolver agrupado
     return {
       populares: Array.isArray(artists.populares) ? artists.populares.map((u) => this.mapUser(u)).filter(Boolean) : [],
       destacados: Array.isArray(artists.destacados) ? artists.destacados.map((u) => this.mapUser(u)).filter(Boolean) : [],
