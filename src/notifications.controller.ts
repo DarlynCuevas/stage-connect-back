@@ -1,5 +1,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
+import { NotifyAvailableArtistsDto } from './notifications/dto/notify-available-artists.dto';
+
 
 
 @Controller('notifications')
@@ -11,8 +13,9 @@ export class NotificationsController {
    * Body: { venueId: string, date: string (YYYY-MM-DD) }
    */
   @Post('available-date')
-  async notifyAvailableDate(@Body() body: { venueId: string; date: string; price?: number }) {
-    console.log('notifyAvailableDate body recibido:', body);
-    return this.notificationsService.notifyAvailableDate(body.venueId, body.date, body.price);
+  async notifyAvailableDate(@Body() body: any) {
+    const data = body.venueId || body;
+    console.log('notifyAvailableDate body recibido:', data);
+    return this.notificationsService.notifyAvailableArtists(data.venueId, data.filters, data.price);
   }
 }

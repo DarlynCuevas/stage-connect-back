@@ -14,20 +14,18 @@ export class NotificationsService {
    * venueId: id del local
    * date: fecha disponible (YYYY-MM-DD)
    */
-  async notifyAvailableDate(venueId: string, date: string, price?: number) {
-    // 1. Buscar artistas disponibles ese día
-    const availableArtists = await this.usersService.findByRoleWithFilters('Artista', { date });
-    // Unir todos los bloques de discoveryBlocks en un solo array
+  async notifyAvailableArtists(venueId: string, filters: any, price?: number) {
+    // 1. Buscar artistas según los filtros recibidos
+    const availableArtists = await this.usersService.findByRoleWithFilters('Artista', filters);
     let artistsArray: any[] = [];
     if (availableArtists && typeof availableArtists === 'object') {
       const { populares = [], destacados = [], resto = [] } = availableArtists;
       artistsArray = [...populares, ...destacados, ...resto];
     }
-    // Solo los que tengan user_id válido (número mayor a 0)
     artistsArray = artistsArray.filter(a => typeof a.user_id === 'number' && a.user_id > 0);
     const artistIds = artistsArray.map(a => a.user_id);
 
-    // 2. Buscar managers con artistas disponibles ese día
+    // 2. Buscar managers con artistas disponibles según los filtros
     const managerIds = Array.from(new Set(
       artistsArray.map((a: any) => a.managerId).filter((id: number | null) => !!id)
     ));
@@ -55,24 +53,18 @@ export class NotificationsService {
       venueId,
       venueName,
       venueCity,
-      date,
+      date: filters.date || '',
       price,
       artistIds,
       managerIds: managerIdsToSend,
     });
 
-    // 4. Enviar notificación por email
-    await this.sendEmailNotification({
-      venueId,
-      date,
-      artistEmails: artistsArray.map((a: any) => a.email),
-      managerEmails: availableManagers.map((m: any) => m.email),
-    });
-
     return {
-      message: `Notificación enviada para venue ${venueId} y fecha ${date}`,
-      artistsNotified: artistsArray.map((a: any) => a.user_id),
-      managersNotified: availableManagers.map((m: any) => m.user_id),
+      notifiedArtists: artistIds,
+      notifiedManagers: managerIdsToSend,
+      filters,
+      price,
+      venueId
     };
   }
 
