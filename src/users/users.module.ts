@@ -12,6 +12,9 @@ import { UsersController } from './users.controller';
 import { PublicUsersController } from './public-users.controller';
 import { PublicVenuesController } from './public-venues.controller';
 import { PublicPromotersController } from './public-promoters.controller';
+import { Follower } from './follower.entity';
+import { FollowersService } from './followers.service';
+import { FollowersController } from './followers.controller';
 import { Request } from '../requests/request.entity';
 import { BlockedDay } from '../blocked-days/blocked-day.entity';
 import { UserFiscalData } from './user-fiscal-data.entity';
@@ -28,11 +31,12 @@ import { UserFiscalDataController } from './user-fiscal-data.controller';
       PromoterProfile,
       Request, 
       BlockedDay,
-      UserFiscalData
+      UserFiscalData,
+      Follower
     ]), 
   ],
-  providers: [UsersService, UserFiscalDataService],
-  controllers: [UsersController, PublicUsersController, PublicVenuesController, PublicPromotersController, UserFiscalDataController],
-  exports: [UsersService, UserFiscalDataService, TypeOrmModule],
+  providers: [UsersService, UserFiscalDataService, FollowersService],
+  controllers: [UsersController, PublicUsersController, PublicVenuesController, PublicPromotersController, UserFiscalDataController, FollowersController],
+  exports: [UsersService, UserFiscalDataService, TypeOrmModule, FollowersService],
 })
 export class UsersModule {}
