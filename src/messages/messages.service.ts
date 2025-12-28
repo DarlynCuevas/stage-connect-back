@@ -41,11 +41,30 @@ export class MessagesService {
       }
     }
 
+    // Sanitizar y añadir nickName si es artista
     const { sanitizeUserResponse } = require('../users/users.service');
-    return conversations.map(conversation => ({
+    const { ArtistProfile } = require('../users/artist-profile.entity');
+    const artistProfileRepo = this.userRepo.manager.getRepository(ArtistProfile);
+
+    async function enrichParticipant(participant: any) {
+      const sanitized = sanitizeUserResponse(participant);
+      if (sanitized.role === 'Artista') {
+        const profile = await artistProfileRepo.findOne({ where: { user_id: sanitized.user_id } });
+        if (profile && profile.nickName) {
+          sanitized.nickName = profile.nickName;
+        }
+      }
+      return sanitized;
+    }
+
+    // Esperar enriquecimiento de todos los participantes
+    const result = await Promise.all(conversations.map(async conversation => ({
       ...conversation,
-      participants: conversation.participants?.map((p: any) => sanitizeUserResponse(p)) ?? [],
-    }));
+      participants: await Promise.all(
+        (conversation.participants ?? []).map((p: any) => enrichParticipant(p))
+      ),
+    })));
+    return result;
   }
 
   async getMessages(conversationId: number, userId: number) {
