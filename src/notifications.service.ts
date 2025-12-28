@@ -22,7 +22,12 @@ export class NotificationsService {
       const { populares = [], destacados = [], resto = [] } = availableArtists;
       artistsArray = [...populares, ...destacados, ...resto];
     }
-    artistsArray = artistsArray.filter(a => typeof a.user_id === 'number' && a.user_id > 0);
+    // Filtrar por caché máximo <= precio ofrecido + 15%
+    let maxPrice = price ? price * 1.15 : undefined;
+    artistsArray = artistsArray.filter(a => {
+      const cacheMax = typeof a.cacheMax === 'number' ? a.cacheMax : (a.priceMax ?? 0);
+      return typeof a.user_id === 'number' && a.user_id > 0 && (!maxPrice || cacheMax <= maxPrice);
+    });
     const artistIds = artistsArray.map(a => a.user_id);
 
     // 2. Buscar managers con artistas disponibles según los filtros
