@@ -1,5 +1,5 @@
 // Sanitiza el usuario para no exponer campos sensibles
-function sanitizeUserResponse(user: any) {
+export function sanitizeUserResponse(user: any) {
   if (!user) return user;
   const { passwordHash, password_hash, ...rest } = user;
   return rest;

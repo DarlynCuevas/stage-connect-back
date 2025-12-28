@@ -22,13 +22,30 @@ export class MessagesService {
   ) {}
 
   async getUserConversations(userId: number) {
-    return this.conversationRepo
+    const conversations = await this.conversationRepo
       .createQueryBuilder('conversation')
       .leftJoinAndSelect('conversation.participants', 'participant')
       .leftJoinAndSelect('conversation.messages', 'messages')
       .where('participant.user_id = :userId', { userId })
       .orderBy('conversation.updatedAt', 'DESC')
       .getMany();
+
+    // Recargar participantes si solo hay uno
+    for (const conv of conversations) {
+      if (conv.participants.length < 2) {
+        const fullConv = await this.conversationRepo.findOne({
+          where: { id: conv.id },
+          relations: ['participants'],
+        });
+        conv.participants = fullConv?.participants ?? conv.participants;
+      }
+    }
+
+    const { sanitizeUserResponse } = require('../users/users.service');
+    return conversations.map(conversation => ({
+      ...conversation,
+      participants: conversation.participants?.map((p: any) => sanitizeUserResponse(p)) ?? [],
+    }));
   }
 
   async getMessages(conversationId: number, userId: number) {
