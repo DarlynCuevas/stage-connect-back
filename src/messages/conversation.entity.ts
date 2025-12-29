@@ -18,6 +18,9 @@ export class Conversation {
   @OneToMany(() => Message, message => message.conversation)
   messages: Message[];
 
+  @Column({ type: 'varchar', default: 'pending' })
+  status: 'pending' | 'accepted';
+
   @CreateDateColumn()
   createdAt: Date;
 

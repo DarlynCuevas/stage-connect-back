@@ -41,4 +41,14 @@ export class MessagesController {
     // @ts-ignore
     return this.messagesService.findOrCreateConversation(req.user.user_id, Number(userId));
   }
+
+  // Endpoint para aceptar solicitud de conversación
+  @Post('conversations/:id/accept')
+  async acceptConversation(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ) {
+    // @ts-ignore
+    return this.messagesService.acceptConversation(Number(id), req.user.user_id);
+  }
 }

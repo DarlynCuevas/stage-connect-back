@@ -21,6 +21,21 @@ export class MessagesService {
     private readonly messagesGateway: MessagesGateway,
   ) {}
 
+  async acceptConversation(conversationId: number, userId: number) {
+    const conversation = await this.conversationRepo.findOne({
+      where: { id: conversationId },
+      relations: ['participants'],
+    });
+    if (!conversation) throw new NotFoundException('Conversación no encontrada');
+    // Solo un participante con rol Local puede aceptar (o ambos, pero aquí solo validamos que sea participante)
+    if (!conversation.participants.some(u => u.user_id === userId)) {
+      throw new ForbiddenException('No tienes acceso a esta conversación');
+    }
+    conversation.status = 'accepted';
+    await this.conversationRepo.save(conversation);
+    return { success: true, status: conversation.status };
+  }
+
   async getUserConversations(userId: number) {
     const conversations = await this.conversationRepo
       .createQueryBuilder('conversation')
@@ -57,13 +72,26 @@ export class MessagesService {
       return sanitized;
     }
 
-    // Esperar enriquecimiento de todos los participantes
-    const result = await Promise.all(conversations.map(async conversation => ({
-      ...conversation,
-      participants: await Promise.all(
+    // Añadir lastMessage a cada conversación
+    const result = await Promise.all(conversations.map(async conversation => {
+      // Enriquecer participantes
+      const enrichedParticipants = await Promise.all(
         (conversation.participants ?? []).map((p: any) => enrichParticipant(p))
-      ),
-    })));
+      );
+      // Buscar el último mensaje (por createdAt)
+      let lastMessage: Message | null = null;
+      if (Array.isArray(conversation.messages) && conversation.messages.length > 0) {
+        lastMessage = conversation.messages.reduce((prev, curr) => {
+          return new Date(curr.createdAt) > new Date(prev.createdAt) ? curr : prev;
+        }, conversation.messages[0]);
+      }
+      return {
+        ...conversation,
+        status: conversation.status,
+        participants: enrichedParticipants,
+        lastMessage: lastMessage as Message | null,
+      };
+    }));
     return result;
   }
 
