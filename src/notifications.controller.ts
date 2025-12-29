@@ -14,8 +14,7 @@ export class NotificationsController {
    */
   @Post('available-date')
   async notifyAvailableDate(@Body() body: any) {
-    const data = body.venueId || body;
-    console.log('notifyAvailableDate body recibido:', data);
-    return this.notificationsService.notifyAvailableArtists(data.venueId, data.filters, data.price);
+    console.log('notifyAvailableDate body recibido:', body);
+    return this.notificationsService.notifyAvailableArtists(body.venueId, body.filters, body.price);
   }
 }
