@@ -20,7 +20,7 @@ export class UploadController {
     async uploadImage(@UploadedFile() file: Express.Multer.File) {
         return new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
-                { folder: 'stage-connect' },
+                { folder: 'artime' },
                 (error, result) => {
                     if (error || !result) {
                         return reject(error || new Error('No result from Cloudinary'));

@@ -27,7 +27,7 @@ async function bootstrap() {
       'http://localhost:8080',
       'http://localhost:5173',
       'https://darlyncuevas.github.io',
-      'https://darlyncuevas.github.io/stage-connect',
+      'https://darlyncuevas.github.io/artime',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
