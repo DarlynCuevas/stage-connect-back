@@ -244,12 +244,13 @@ export class RequestsService {
         eventDateType: typeof request.eventDate,
       });
       await this.blockedDaysService.create(request.artist.user_id, request.eventDate);
-      // --- NUEVO: Actualizar interesado a 'accepted' si existe ---
+      // --- NUEVO: Actualizar interesados ---
       // Convertir la fecha a string YYYY-MM-DD para comparar con Interested
       const eventDateStr = request.eventDate instanceof Date
         ? request.eventDate.toISOString().slice(0, 10)
         : String(request.eventDate);
-      const interested = await this.interestedRepository.findOne({
+      // 1. Aceptar el interesado del artista seleccionado
+      const acceptedInterested = await this.interestedRepository.findOne({
         where: {
           artistId: request.artist.user_id,
           venueId: request.requester.user_id,
@@ -257,10 +258,20 @@ export class RequestsService {
           status: 'interested',
         },
       });
-      if (interested) {
-        interested.status = 'accepted';
-        await this.interestedRepository.save(interested);
+      if (acceptedInterested) {
+        acceptedInterested.status = 'accepted';
+        await this.interestedRepository.save(acceptedInterested);
       }
+      // 2. Expirar los demás interesados de la misma oferta
+      await this.interestedRepository
+        .createQueryBuilder()
+        .update()
+        .set({ status: 'expired' })
+        .where('venueId = :venueId', { venueId: request.requester.user_id })
+        .andWhere('date = :date', { date: eventDateStr })
+        .andWhere('artistId != :artistId', { artistId: request.artist.user_id })
+        .andWhere('status IN (:...statuses)', { statuses: ['pending', 'interested'] })
+        .execute();
       // --- FIN NUEVO ---
       // Generar contrato PDF
       try {

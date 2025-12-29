@@ -8,7 +8,7 @@ import { UsersModule } from './users/users.module';
 @Module({
   imports: [TypeOrmModule.forFeature([Interested]), UsersModule],
   controllers: [InterestedController],
-  providers: [NotificationsGateway],
-  exports: [NotificationsGateway],
+  providers: [NotificationsGateway, require('./notifications.service').NotificationsService],
+  exports: [NotificationsGateway, require('./notifications.service').NotificationsService],
 })
 export class InterestedModule {}

@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { UsersService } from './users/users.service';
 import { NotificationsGateway } from './notifications.gateway';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Interested } from './interested.entity';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     private readonly usersService: UsersService,
     private readonly notificationsGateway: NotificationsGateway,
+    @InjectRepository(Interested)
+    private readonly interestedRepo: Repository<Interested>,
   ) {}
 
   /**
@@ -29,6 +34,19 @@ export class NotificationsService {
       return typeof a.user_id === 'number' && a.user_id > 0 && (!maxPrice || cacheMax <= maxPrice);
     });
     const artistIds = artistsArray.map(a => a.user_id);
+
+    // Registrar oferta en la base de datos (tabla Interested)
+    if (artistIds.length > 0) {
+      const interestedList = artistIds.map((artistId: number) => this.interestedRepo.create({
+        venueId: Number(venueId),
+        managerId: null,
+        artistId,
+        date: filters.date || '',
+        price: price ?? null,
+        status: 'pending',
+      }));
+      await this.interestedRepo.save(interestedList);
+    }
 
     // 2. Buscar managers con artistas disponibles según los filtros
     const managerIds = Array.from(new Set(

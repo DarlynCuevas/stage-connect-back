@@ -24,6 +24,7 @@ import { UploadController } from './upload.controller';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([require('./interested.entity').Interested]),
     // 1. Configura para cargar el archivo .env
     ConfigModule.forRoot({ isGlobal: true }), 
     
