@@ -266,6 +266,11 @@ export class RequestsService {
       try {
         await this.contractService.generateContractPdf(request.id);
         console.log('[CONTRATO] Contrato PDF generado para request', request.id);
+        // Recargar el request para obtener la URL actualizada
+        const updatedRequest = await this.requestsRepository.findOne({ where: { id: request.id } });
+        if (updatedRequest) {
+          request.contractPdfUrl = updatedRequest.contractPdfUrl;
+        }
       } catch (err) {
         console.error('[CONTRATO] Error generando contrato PDF:', err);
       }

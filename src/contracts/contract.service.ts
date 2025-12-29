@@ -88,14 +88,21 @@ export class ContractService {
           public_id: `contracts/${pdfFileName}`,
           folder: 'contracts',
           format: 'pdf',
+          type: 'upload', // Asegura que el archivo sea público
         },
         async (error, result) => {
-          if (error) return reject(error);
+          if (error) {
+            console.error('[CONTRATO] Error subiendo PDF a Cloudinary:', error);
+            return reject(error);
+          }
           if (result && result.secure_url) {
             request.contractPdfUrl = result.secure_url;
-            await this.bookingRequestRepo.save(request);
+            console.log('[CONTRATO] URL generada:', result.secure_url);
+            const saved = await this.bookingRequestRepo.save(request);
+            console.log('[CONTRATO] Request guardado:', saved.id, saved.contractPdfUrl);
             resolve(result.secure_url);
           } else {
+            console.error('[CONTRATO] No se obtuvo URL de Cloudinary');
             reject(new Error('No Cloudinary URL'));
           }
         }
