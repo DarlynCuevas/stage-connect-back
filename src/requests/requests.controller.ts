@@ -7,11 +7,34 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestStatusDto } from './dto/update-request-status.dto';
 import { plainToInstance } from 'class-transformer';
 import { RequestSafeDto } from './dto/request-safe.dto';
+import { Offer } from './offer.entity';
+import { CreateOfferDto } from './dto/create-offer.dto';
 
 @Controller('requests')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class RequestsController {
   constructor(private readonly requestsService: RequestsService) {}
+  /**
+   * POST /requests/:id/offers
+   * Crear una oferta o contraoferta para una solicitud
+   */
+  @Post(':id/offers')
+  async createOffer(
+    @Param('id', ParseIntPipe) requestId: number,
+    @Body() createOfferDto: CreateOfferDto,
+    @Request() req
+  ): Promise<Offer> {
+    return this.requestsService.createOffer(requestId, createOfferDto, req.user.user_id);
+  }
+
+  /**
+   * GET /requests/:id/offers
+   * Listar historial de ofertas de una solicitud
+   */
+  @Get(':id/offers')
+  async getOffers(@Param('id', ParseIntPipe) requestId: number): Promise<Offer[]> {
+    return this.requestsService.getOffers(requestId);
+  }
 
   /**
    * POST /requests
@@ -21,7 +44,9 @@ export class RequestsController {
   @Roles('Local', 'Promotor')
   async create(@Body() createRequestDto: CreateRequestDto, @Request() req) {
     const currentUserId = req.user?.user_id;
-    return this.requestsService.create(createRequestDto, currentUserId);
+    const result = await this.requestsService.create(createRequestDto, currentUserId);
+    // Sanitizar usando RequestSafeDto
+    return plainToInstance(RequestSafeDto, result, { excludeExtraneousValues: true });
   }
 
   /**
@@ -33,25 +58,7 @@ export class RequestsController {
   async getUserRequests(@Request() req) {
     const currentUserId = req.user?.user_id;
     const userRole = req.user?.role;
-    let requests: import('./request.entity').Request[] = [];
-    if (userRole === 'Artista') {
-      requests = await this.requestsService.findByArtistUserId(currentUserId);
-    } else if (userRole === 'Local' || userRole === 'Promotor') {
-      requests = await this.requestsService.findBySenderUserId(currentUserId);
-    } else if (userRole === 'Manager') {
-      requests = await this.requestsService.findByManagerId(currentUserId);
-    }
-    // Sanitizar artist y requester en cada request
-    const sanitizeUser = (user: any) => {
-      if (!user) return user;
-      const { password, passwordHash, password_hash, email, ...rest } = user;
-      return rest;
-    };
-    return requests.map(req => ({
-      ...req,
-      artist: sanitizeUser(req.artist),
-      requester: sanitizeUser(req.requester),
-    }));
+    return this.requestsService.getUserRequestsSanitized(currentUserId, userRole);
   }
 
   /**

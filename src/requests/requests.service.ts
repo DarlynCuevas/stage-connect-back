@@ -1,3 +1,7 @@
+
+import { Offer } from './offer.entity';
+import { CreateOfferDto } from './dto/create-offer.dto';
+
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Between } from 'typeorm';
@@ -14,6 +18,43 @@ import { Interested } from '../interested.entity';
 
 @Injectable()
 export class RequestsService {
+
+    /**
+     * Obtener todas las solicitudes del usuario logueado (artista, local, promotor, manager) y sanitizarlas
+     */
+    async getUserRequestsSanitized(currentUserId: number, userRole: string) {
+      let requests: Request[] = [];
+      if (userRole === 'Artista') {
+        requests = await this.findByArtistUserId(currentUserId);
+      } else if (userRole === 'Local' || userRole === 'Promotor') {
+        requests = await this.findBySenderUserId(currentUserId);
+      } else if (userRole === 'Manager') {
+        requests = await this.findByManagerId(currentUserId);
+      }
+
+      // Sanitizar artist y requester en cada request
+      const sanitizeUser = async (user: any) => {
+        if (!user) return user;
+        const { password, passwordHash, password_hash, email, ...rest } = user;
+        let basePrice: number | undefined = undefined;
+        if (user.role === 'Artista' && user.user_id) {
+          const profile = await this.artistProfileRepository.findOne({ where: { user_id: user.user_id } });
+          basePrice = profile?.basePrice;
+        }
+        return { ...rest, basePrice };
+      };
+
+      // Mapear y sanitizar usuarios de forma asíncrona, asegurando que artist.basePrice siempre esté presente
+      return Promise.all(requests.map(async req => {
+        const artist = await sanitizeUser(req.artist);
+        const requester = await sanitizeUser(req.requester);
+        return {
+          ...req,
+          artist,
+          requester,
+        };
+      }));
+    }
   constructor(
     @InjectRepository(Request)
     private readonly requestsRepository: Repository<Request>,
@@ -25,6 +66,8 @@ export class RequestsService {
     private readonly blockedDayRepository: Repository<BlockedDay>,
     @InjectRepository(Interested)
     private readonly interestedRepository: Repository<Interested>,
+    @InjectRepository(Offer)
+    private readonly offerRepository: Repository<Offer>,
     private readonly requestsGateway: RequestsGateway,
     private readonly blockedDaysService: BlockedDaysService,
     private readonly contractService: ContractService,
@@ -328,7 +371,7 @@ export class RequestsService {
           user_id: requesterUserId,
         },
       },
-      relations: ['artist', 'requester'],
+      relations: ['artist', 'requester', 'offers'],
       order: {
         createdAt: 'DESC',
       },
@@ -439,6 +482,33 @@ export class RequestsService {
       eventsThisMonth,
       totalRevenue,
     };
+  }
+    async createOffer(requestId: number, dto: CreateOfferDto, userId: number): Promise<Offer> {
+      const request = await this.requestsRepository.findOne({ where: { id: requestId }, relations: ['offers'] });
+      if (!request) throw new NotFoundException('Request not found');
+      const user = await this.usersRepository.findOne({ where: { user_id: userId } });
+      if (!user) throw new NotFoundException('User not found');
+
+      // Si la solicitud no está aceptada ni rechazada, ponerla en estado NEGOCIANDO
+      if (request.status !== RequestStatus.ACEPTADA && request.status !== RequestStatus.RECHAZADA) {
+        request.status = RequestStatus.NEGOCIANDO;
+        await this.requestsRepository.save(request);
+      }
+
+      const offer = this.offerRepository.create({
+        request,
+        user,
+        amount: dto.amount,
+        type: dto.type,
+        message: dto.message,
+      });
+      return this.offerRepository.save(offer);
+    }
+
+  async getOffers(requestId: number): Promise<Offer[]> {
+    const request = await this.requestsRepository.findOne({ where: { id: requestId }, relations: ['offers'] });
+    if (!request) throw new NotFoundException('Request not found');
+    return request.offers;
   }
 }
 

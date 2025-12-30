@@ -1,4 +1,6 @@
-  // ...existing code...
+
+import { Offer } from './offer.entity';
+
 // Enum para quién cierra la solicitud
 export enum ClosedBy {
   ARTIST = 'artist',
@@ -12,13 +14,15 @@ import {
   ManyToOne, 
   JoinColumn, 
   CreateDateColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
+  OneToMany
 } from 'typeorm';
 import { User } from '../users/user.entity';
 
 // Enum para los estados de solicitud
 export enum RequestStatus {
   PENDIENTE = 'Pending',
+  NEGOCIANDO = 'Negotiating',
   ACEPTADA = 'Accepted',
   RECHAZADA = 'Rejected',
 }
@@ -99,5 +103,8 @@ export class Request {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @OneToMany(() => Offer, offer => offer.request, { cascade: true })
+  offers: Offer[];
 }
 

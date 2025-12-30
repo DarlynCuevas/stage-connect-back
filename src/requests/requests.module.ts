@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Request } from './request.entity';
 import { User } from '../users/user.entity';
 import { ArtistProfile } from '../users/artist-profile.entity';
+import { Offer } from './offer.entity';
 import { RequestsService } from './requests.service';
 import { RequestsController } from './requests.controller';
 import { RequestsGateway } from './requests.gateway';
@@ -14,7 +15,7 @@ import { Interested } from '../interested.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Request, User, ArtistProfile, BlockedDay, Interested]),
+    TypeOrmModule.forFeature([Request, User, ArtistProfile, BlockedDay, Interested, Offer]),
     AuthModule,
     BlockedDaysModule,
     ContractModule,

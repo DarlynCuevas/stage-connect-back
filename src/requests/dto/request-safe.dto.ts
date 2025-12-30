@@ -1,4 +1,5 @@
 import { Expose, Type } from 'class-transformer';
+import { OfferSafeDto } from './offer-safe.dto';
 
 export class UserSafeDto {
   @Expose()
@@ -21,14 +22,28 @@ export class UserSafeDto {
 
   @Expose()
   role: string;
+
+  // Exponer basePrice si existe artistProfile
+  @Expose({ name: 'basePrice' })
+  get basePrice(): number | undefined {
+    // @ts-ignore
+    return this['artistProfile']?.basePrice;
+  }
 }
 
 export class RequestSafeDto {
   @Expose()
   id: number;
 
+
   @Expose()
   eventDate: Date;
+
+  @Expose()
+  horaInicio?: string;
+
+  @Expose()
+  horaFin?: string;
 
   @Expose()
   eventLocation?: string;
@@ -52,6 +67,10 @@ export class RequestSafeDto {
   status: string;
 
   @Expose()
+  
+  @Expose()
+  @Type(() => OfferSafeDto)
+  offers?: OfferSafeDto[];
   createdAt: Date;
 
   @Expose()
