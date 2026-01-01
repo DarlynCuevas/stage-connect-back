@@ -1,5 +1,5 @@
-
 import { Offer } from './offer.entity';
+import { User } from '../users/user.entity';
 
 // Enum para quién cierra la solicitud
 export enum ClosedBy {
@@ -17,7 +17,7 @@ import {
   UpdateDateColumn,
   OneToMany
 } from 'typeorm';
-import { User } from '../users/user.entity';
+
 
 // Enum para los estados de solicitud
 export enum RequestStatus {
@@ -94,6 +94,10 @@ export class Request {
     default: ClosedBy.NONE,
   })
   closed_by: ClosedBy;
+
+    // Indica si la última oferta es final y ya no se puede negociar
+  @Column({ type: 'boolean', default: false })
+  isFinalOffer: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

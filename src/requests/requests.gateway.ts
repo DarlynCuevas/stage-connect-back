@@ -1,3 +1,4 @@
+
 import { Injectable } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayConnection } from '@nestjs/websockets';
 import { Server } from 'socket.io';
@@ -9,7 +10,8 @@ type RequestCreatedPayload = {
   artistId: number;
   requesterId: number;
   eventDate: string;
-  eventLocation: string;
+  city?: string;
+  country?: string;
   eventType: string;
   offeredPrice: number;
   message?: string;
@@ -24,6 +26,9 @@ type RequestUpdatedPayload = {
   managerId?: number;
   status: string;
   updatedAt?: string;
+  venueName?: string;
+  eventDate?: string;
+  offeredPrice?: number;
 };
 
 /**
@@ -79,6 +84,8 @@ export class RequestsGateway implements OnGatewayConnection {
       // Join the user to their personal room
       const room = this.getUserRoom(userId);
       client.join(room);
+      // Log para depuración
+      console.log('Socket conectado:', userId, 'Sala:', room);
     } catch (err) {
       client.disconnect();
     }
@@ -113,5 +120,17 @@ export class RequestsGateway implements OnGatewayConnection {
 
   private getUserRoom(userId: number): string {
     return `user:${userId}`;
+  }
+
+  /** Notifica contraoferta SOLO al artista */
+  emitOfferCreatedArtist(payload: any) {
+    const artistRoom = this.getUserRoom(payload.artistId);
+    this.server?.to(artistRoom).emit('offer.created.artist', payload);
+  }
+
+  /** Notifica contraoferta SOLO al local (requester) */
+  emitOfferCreatedVenue(payload: any) {
+    const requesterRoom = this.getUserRoom(payload.requesterId);
+    this.server?.to(requesterRoom).emit('offer.created.venue', payload);
   }
 }

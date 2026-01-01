@@ -194,7 +194,8 @@ export class RequestsService {
       managerId: artistProfile?.managerId,
       requesterId: requester.user_id,
       eventDate: saved.eventDate?.toString?.() || String(saved.eventDate),
-      eventLocation: saved.eventLocation,
+      city: saved.ciudadLocal,
+      country: requester.country || undefined,
       eventType: saved.eventType,
       offeredPrice: Number(saved.offeredPrice),
       message: saved.message,
@@ -215,7 +216,7 @@ export class RequestsService {
           user_id: artistUserId,
         },
       },
-      relations: ['artist', 'requester'],
+      relations: ['artist', 'requester', 'offers', 'offers.user'],
       order: {
         createdAt: 'DESC',
       },
@@ -266,9 +267,15 @@ export class RequestsService {
       throw new ForbiddenException('No tienes permiso para modificar esta solicitud.');
     }
 
-    // Validar que la solicitud está en estado PENDIENTE
-    if (request.status !== RequestStatus.PENDIENTE) {
-      throw new BadRequestException('Solo se pueden cambiar solicitudes en estado PENDIENTE.');
+    // Permitir cambiar a ACEPTADA o RECHAZADA si está en PENDIENTE o NEGOCIANDO
+    if (
+      !(
+        request.status === RequestStatus.PENDIENTE ||
+        (request.status === RequestStatus.NEGOCIANDO &&
+          (statusDto.status === RequestStatus.RECHAZADA || statusDto.status === RequestStatus.ACEPTADA))
+      )
+    ) {
+      throw new BadRequestException('Solo se pueden cambiar solicitudes en estado PENDIENTE o finalizar negociaciones activas.');
     }
 
 
@@ -338,7 +345,56 @@ export class RequestsService {
       managerId: artistProfile?.managerId || undefined,
       status: saved.status,
       updatedAt: saved.updatedAt?.toISOString?.(),
+      venueName: saved.requester?.name,
+      eventDate: saved.eventDate?.toString?.(),
+      offeredPrice: Number(saved.offeredPrice),
     });
+
+    // Notificar al local y al artista si la solicitud fue aceptada
+    if (saved.status === RequestStatus.ACEPTADA) {
+      // Notificar al local (ya implementado)
+      this.requestsGateway.server?.to(this.requestsGateway['getUserRoom'](saved.requester.user_id)).emit('notification.booking-accepted-by-artist', {
+        id: saved.id,
+        artistId: saved.artist.user_id,
+        artistName: saved.artist?.name,
+        venueName: saved.requester?.name,
+        eventDate: saved.eventDate?.toString?.(),
+        offeredPrice: Number(saved.offeredPrice),
+      });
+      // Notificar al artista
+      this.requestsGateway.server?.to(this.requestsGateway['getUserRoom'](saved.artist.user_id)).emit('notification.booking-accepted-by-venue', {
+        id: saved.id,
+        artistId: saved.artist.user_id,
+        artistName: saved.artist?.name,
+        venueName: saved.requester?.name,
+        eventDate: saved.eventDate?.toString?.(),
+        offeredPrice: Number(saved.offeredPrice),
+      });
+    }
+
+    // Notificar al artista o al local si la solicitud fue rechazada
+    if (saved.status === RequestStatus.RECHAZADA) {
+      // Si el que rechaza es el artista o su manager, notificar al local
+      if (isArtist || isManager) {
+        this.requestsGateway.server?.to(this.requestsGateway['getUserRoom'](saved.requester.user_id)).emit('notification.booking-rejected-by-artist', {
+          id: saved.id,
+          artistId: saved.artist.user_id,
+          artistName: saved.artist?.name,
+          venueName: saved.requester?.name,
+          eventDate: saved.eventDate?.toString?.(),
+          offeredPrice: Number(saved.offeredPrice),
+        });
+      } else {
+        // Si el que rechaza es el local, notificar al artista (ya implementado)
+        this.requestsGateway.server?.to(this.requestsGateway['getUserRoom'](saved.artist.user_id)).emit('notification.booking-rejected', {
+          id: saved.id,
+          artistId: saved.artist.user_id,
+          venueName: saved.requester?.name,
+          eventDate: saved.eventDate?.toString?.(),
+          offeredPrice: Number(saved.offeredPrice),
+        });
+      }
+    }
 
     return saved;
   }
@@ -484,14 +540,22 @@ export class RequestsService {
     };
   }
     async createOffer(requestId: number, dto: CreateOfferDto, userId: number): Promise<Offer> {
-      const request = await this.requestsRepository.findOne({ where: { id: requestId }, relations: ['offers'] });
+      const request = await this.requestsRepository.findOne({ where: { id: requestId }, relations: ['artist', 'requester', 'offers'] });
       if (!request) throw new NotFoundException('Request not found');
+      // Si la solicitud ya tiene una oferta final, no permitir más contraofertas
+      if (request.isFinalOffer) {
+        throw new BadRequestException('No se puede negociar más. Ya existe una oferta final.');
+      }
       const user = await this.usersRepository.findOne({ where: { user_id: userId } });
       if (!user) throw new NotFoundException('User not found');
 
       // Si la solicitud no está aceptada ni rechazada, ponerla en estado NEGOCIANDO
       if (request.status !== RequestStatus.ACEPTADA && request.status !== RequestStatus.RECHAZADA) {
         request.status = RequestStatus.NEGOCIANDO;
+        // Si la oferta es final, marcar la request como final
+        if (dto.type === 'final') {
+          request.isFinalOffer = true;
+        }
         await this.requestsRepository.save(request);
       }
 
@@ -502,7 +566,35 @@ export class RequestsService {
         type: dto.type,
         message: dto.message,
       });
-      return this.offerRepository.save(offer);
+      const savedOffer = await this.offerRepository.save(offer);
+
+      // Notificar SOLO a la contraparte
+      if (dto.type === 'counter' || dto.type === 'final') {
+        const payload = {
+          offerId: savedOffer.id,
+          requestId: request.id,
+          requesterId: request.requester.user_id,
+          artistId: request.artist.user_id,
+          eventDate: request.eventDate,
+          amount: savedOffer.amount,
+          type: savedOffer.type,
+          message: savedOffer.message,
+          createdAt: savedOffer.createdAt,
+          eventType: request.eventType,
+          artistName: request.artist.name,
+          venueName: request.requester.name,
+          senderId: userId, // Añadido para filtrar correctamente en frontend
+        };
+        if (userId === request.artist.user_id) {
+          // Si la contraoferta la hace el artista, notificar SOLO al local
+          this.requestsGateway.emitOfferCreatedVenue(payload);
+        } else if (userId === request.requester.user_id) {
+          // Si la contraoferta la hace el local, notificar SOLO al artista
+          this.requestsGateway.emitOfferCreatedArtist(payload);
+        }
+      }
+
+      return savedOffer;
     }
 
   async getOffers(requestId: number): Promise<Offer[]> {
