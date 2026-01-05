@@ -62,8 +62,8 @@ export class InterestedController {
   ) {
     await this.interestedRepo.update(id, { status: body.status });
 
-    // Si el estado es 'accepted', emitir notificación al local
-    if (body.status === 'accepted') {
+    // Si el estado es 'interested', emitir notificación al local
+    if (body.status === 'interested') {
       // Buscar el registro con relaciones
       const interested = await this.interestedRepo.findOne({
         where: { id },
@@ -72,11 +72,12 @@ export class InterestedController {
       if (interested) {
         // Obtener nombre del artista
         let artistName = interested.artist?.nickName || interested.artist?.user?.name || 'Artista';
-        // Emitir notificación al local (venue)
+        // Emitir notificación al local (venue) incluyendo createdAt
         this.notificationsGateway.server.to(`user:${interested.venueId}`).emit('notification.artist-interested', {
           message: `${artistName} está interesado para el día ${interested.date}`,
           artistId: interested.artistId,
           date: interested.date,
+          createdAt: interested.createdAt,
         });
       }
     }
