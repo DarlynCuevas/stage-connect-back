@@ -104,18 +104,38 @@ export class RequestsService {
     }
 
 
-    // Validar que no exista ya una solicitud pendiente para el mismo artista, requester y fecha
-    const existingPending = await this.requestsRepository.findOne({
+    // Buscar si existen solicitudes previas activas (no canceladas ni rechazadas) para el mismo artista, requester y fecha
+    const existingActive = await this.requestsRepository.findOne({
       where: {
         artist: { user_id: artistId },
         requester: { user_id: currentUserId },
         eventDate: parsedEventDate,
-        status: RequestStatus.PENDIENTE,
+        status: In([RequestStatus.PENDIENTE, RequestStatus.ACEPTADA, RequestStatus.NEGOCIANDO]),
       },
       relations: ['artist', 'requester'],
     });
-    if (existingPending) {
-      throw new BadRequestException('Ya existe una solicitud pendiente para este artista y fecha.');
+    if (existingActive) {
+      throw new BadRequestException('Ya existe una solicitud activa para este artista y fecha.');
+    }
+
+    // Buscar si existen solicitudes previas (de cualquier estado) para el mismo artista, requester y fecha
+    const previousRequests = await this.requestsRepository.find({
+      where: {
+        artist: { user_id: artistId },
+        requester: { user_id: currentUserId },
+        eventDate: parsedEventDate,
+      },
+      relations: ['artist', 'requester'],
+    });
+
+    // Si hay alguna previa activa, status = NEGOCIANDO. Si no hay ninguna previa activa, status = PENDIENTE
+    let statusToSet = RequestStatus.PENDIENTE;
+    if (previousRequests && previousRequests.length > 0) {
+      // Si todas las previas están canceladas o rechazadas, es como "primera vez"
+      const hasActive = previousRequests.some(r => ![RequestStatus.CANCELADA, RequestStatus.RECHAZADA].includes(r.status));
+      if (hasActive) {
+        statusToSet = RequestStatus.NEGOCIANDO;
+      }
     }
 
     if (!currentUserId) {
