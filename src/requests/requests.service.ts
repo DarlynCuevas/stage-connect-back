@@ -132,7 +132,7 @@ export class RequestsService {
     let statusToSet = RequestStatus.PENDIENTE;
     if (previousRequests && previousRequests.length > 0) {
       // Si todas las previas están canceladas o rechazadas, es como "primera vez"
-      const hasActive = previousRequests.some(r => ![RequestStatus.CANCELADA, RequestStatus.RECHAZADA].includes(r.status));
+      const hasActive = previousRequests.some(r => r.status !== RequestStatus.RECHAZADA);
       if (hasActive) {
         statusToSet = RequestStatus.NEGOCIANDO;
       }
